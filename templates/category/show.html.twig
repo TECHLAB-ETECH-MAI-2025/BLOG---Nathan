@@ -20,7 +20,7 @@
                     </tr>
                     <tr>
                         <th>Nombre d'articles</th>
-                        <td>{{ category.articles|length }}</td>
+                        <td>{{ total }}</td>
                     </tr>
                 </tbody>
             </table>
@@ -38,7 +38,7 @@
 
     <h2>Articles dans cette catégorie</h2>
     <div class="row">
-        {% for article in category.articles %}
+        {% for article in articles %}
             <div class="col-md-4 mb-4">
                 <div class="card">
                     <div class="card-body">
@@ -53,6 +53,15 @@
                 <p>Aucun article dans cette catégorie</p>
             </div>
         {% endfor %}
+    </div>
+
+    <div class="d-flex justify-content-center mt-4">
+        {% include 'components/_pagination.html.twig' with {
+            currentPage: currentPage,
+            maxPages: maxPages,
+            route: 'app_category_show',
+            params: {'id': category.id}
+        } %}
     </div>
 
     <a href="{{ path('app_category_index') }}" class="btn btn-secondary mt-3">Retour à la liste</a>

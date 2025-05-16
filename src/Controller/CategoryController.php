@@ -43,12 +43,26 @@ class CategoryController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_category_show', methods: ['GET'])]
-    public function show(Category $category): Response
+    public function show(Category $category, CategoryRepository $categoryRepository, Request $request): Response
     {
+        $page = max(1, $request->query->getInt('page', 1));
+        $limit = 6; // 6 articles par page
+        
+        $articles = $categoryRepository->findArticlesPaginated($category, $page, $limit);
+        $total = $categoryRepository->countArticles($category);
+        
+        $maxPages = ceil($total / $limit);
+        
         return $this->render('category/show.html.twig', [
             'category' => $category,
+            'articles' => $articles,
+            'currentPage' => $page,
+            'maxPages' => $maxPages,
+            'limit' => $limit,
+            'total' => $total
         ]);
     }
+
 
     #[Route('/{id}/edit', name: 'app_category_edit', methods: ['GET', 'POST'])]
     public function edit(Request $request, Category $category, EntityManagerInterface $entityManager): Response

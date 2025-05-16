@@ -18,12 +18,25 @@ use App\Form\CommentType;
 class ArticleController extends AbstractController
 {
     #[Route('/', name: 'app_article_index', methods: ['GET'])]
-    public function index(ArticleRepository $articleRepository): Response
+    public function index(ArticleRepository $articleRepository, Request $request): Response
     {
+        $page = max(1, $request->query->getInt('page', 1));
+        $limit = 2; // Nombre d'articles par page
+        
+        $articles = $articleRepository->findPaginated($page, $limit);
+        $total = $articleRepository->countAll();
+        
+        $maxPages = ceil($total / $limit);
+        
         return $this->render('article/index.html.twig', [
-            'articles' => $articleRepository->findAll(),
+            'articles' => $articles,
+            'currentPage' => $page,
+            'maxPages' => $maxPages,
+            'limit' => $limit,
+            'total' => $total
         ]);
     }
+
 
     #[Route('/new', name: 'app_article_new', methods: ['GET', 'POST'])]
     public function new(Request $request, EntityManagerInterface $entityManager): Response
