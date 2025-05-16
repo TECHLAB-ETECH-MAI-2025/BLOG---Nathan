@@ -10,6 +10,9 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use App\Entity\Comment;
+use App\Form\CommentType;
+
 
 #[Route('/article')]
 class ArticleController extends AbstractController
@@ -42,13 +45,32 @@ class ArticleController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}', name: 'app_article_show', methods: ['GET'])]
-    public function show(Article $article): Response
+    #[Route('/{id}', name: 'app_article_show', methods: ['GET', 'POST'])]
+    public function show(Request $request, Article $article, EntityManagerInterface $entityManager): Response
     {
+        $comment = new Comment();
+        $comment->setArticle($article);
+        $comment->setCreatedAt(new \DateTimeImmutable());
+        
+        $form = $this->createForm(CommentType::class, $comment);
+        $form->handleRequest($request);
+        
+        if ($form->isSubmitted() && $form->isValid()) {
+            $entityManager->persist($comment);
+            $entityManager->flush();
+            
+            $this->addFlash('success', 'Votre commentaire a été ajouté avec succès !');
+            
+            return $this->redirectToRoute('app_article_show', ['id' => $article->getId()], Response::HTTP_SEE_OTHER);
+        }
+        
+        
         return $this->render('article/show.html.twig', [
             'article' => $article,
+            'commentForm' => $form,
         ]);
     }
+
 
     #[Route('/{id}/edit', name: 'app_article_edit', methods: ['GET', 'POST'])]
     public function edit(Request $request, Article $article, EntityManagerInterface $entityManager): Response

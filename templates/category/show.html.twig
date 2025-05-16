@@ -1,0 +1,59 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Catégorie: {{ category.nom }}{% endblock %}
+
+{% block body %}
+    <h1>Catégorie: {{ category.nom }}</h1>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Détails de la catégorie</h5>
+            <table class="table">
+                <tbody>
+                    <tr>
+                        <th>ID</th>
+                        <td>{{ category.id }}</td>
+                    </tr>
+                    <tr>
+                        <th>Nom</th>
+                        <td>{{ category.nom }}</td>
+                    </tr>
+                    <tr>
+                        <th>Nombre d'articles</th>
+                        <td>{{ category.articles|length }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer">
+            <div class="d-flex">
+                <a href="{{ path('app_category_edit', {'id': category.id}) }}" class="btn btn-warning me-2">Modifier</a>
+                <form method="post" action="{{ path('app_category_delete', {'id': category.id}) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette catégorie?');">
+                    <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ category.id) }}">
+                    <button class="btn btn-danger">Supprimer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <h2>Articles dans cette catégorie</h2>
+    <div class="row">
+        {% for article in category.articles %}
+            <div class="col-md-4 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ article.titre }}</h5>
+                        <p class="card-text">{{ article.contenu|slice(0, 100) }}...</p>
+                        <a href="{{ path('app_article_show', {'id': article.id}) }}" class="btn btn-primary">Lire la suite</a>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="col-12">
+                <p>Aucun article dans cette catégorie</p>
+            </div>
+        {% endfor %}
+    </div>
+
+    <a href="{{ path('app_category_index') }}" class="btn btn-secondary mt-3">Retour à la liste</a>
+{% endblock %}
