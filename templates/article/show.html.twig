@@ -3,29 +3,71 @@
 {% block title %}{{ article.titre }}{% endblock %}
 
 {% block body %}
-    <div class="container mt-4">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h1>{{ article.titre }}</h1>
-                <div>
-                    <a href="{{ path('app_article_edit', {'id': article.id}) }}" class="btn btn-warning">Modifier</a>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    {% for category in article.categories %}
-                        <span class="badge bg-secondary">{{ category.nom }}</span>
-                    {% endfor %}
-                </div>
-                <p>{{ article.contenu|nl2br }}</p>
-            </div>
-            <div class="card-footer">
-                <form method="post" action="{{ path('app_article_delete', {'id': article.id}) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cet article?');">
-                    <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ article.id) }}">
-                    <button class="btn btn-danger">Supprimer</button>
-                </form>
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h1>{{ article.titre }}</h1>
+            <div>
+                <a href="{{ path('app_article_edit', {'id': article.id}) }}" class="btn btn-warning">Modifier</a>
             </div>
         </div>
-        <a href="{{ path('app_article_index') }}" class="btn btn-secondary mt-3">Retour à la liste</a>
+        <div class="card-body">
+            <div class="mb-3">
+                {% for category in article.categories %}
+                    <span class="badge bg-secondary">{{ category.nom }}</span>
+                {% endfor %}
+            </div>
+            <p>{{ article.contenu|nl2br }}</p>
+        </div>
+        <div class="card-footer">
+            <form method="post" action="{{ path('app_article_delete', {'id': article.id}) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cet article?');">
+                <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ article.id) }}">
+                <button class="btn btn-danger">Supprimer</button>
+            </form>
+        </div>
     </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2>Commentaires ({{ article.comments|length }})</h2>
+        </div>
+        <div class="card-body">
+            {% if article.comments|length > 0 %}
+                {% for comment in article.commentsSortedByDate %}
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ comment.auteur }}</h5>
+                            <h6 class="card-subtitle mb-2 text-muted">{{ comment.createdAt|date('d/m/Y H:i') }}</h6>
+                            <p class="card-text">{{ comment.contenu|nl2br }}</p>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p>Aucun commentaire pour cet article.</p>
+            {% endif %}
+            
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2>Ajouter un commentaire</h2>
+        </div>
+        <div class="card-body">
+            {{ form_start(commentForm) }}
+                <div class="mb-3">
+                    {{ form_label(commentForm.auteur) }}
+                    {{ form_widget(commentForm.auteur) }}
+                    {{ form_errors(commentForm.auteur) }}
+                </div>
+                <div class="mb-3">
+                    {{ form_label(commentForm.contenu) }}
+                    {{ form_widget(commentForm.contenu) }}
+                    {{ form_errors(commentForm.contenu) }}
+                </div>
+                <button type="submit" class="btn btn-primary">Publier</button>
+            {{ form_end(commentForm) }}
+        </div>
+    </div>
+
+    <a href="{{ path('app_article_index') }}" class="btn btn-secondary">Retour à la liste</a>
 {% endblock %}
