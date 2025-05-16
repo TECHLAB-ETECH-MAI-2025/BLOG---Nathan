@@ -1,0 +1,70 @@
+{% if maxPages > 1 %}
+<nav aria-label="Pagination">
+    <ul class="pagination justify-content-center">
+        {# Lien vers la première page #}
+        {% if currentPage > 1 %}
+            <li class="page-item">
+                <a class="page-link" href="{{ path(route, {page: 1}|merge(params|default({}))) }}" aria-label="Première page">
+                    <span aria-hidden="true">&laquo;&laquo;</span>
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">&laquo;&laquo;</span>
+            </li>
+        {% endif %}
+        
+        {# Lien vers la page précédente #}
+        {% if currentPage > 1 %}
+            <li class="page-item">
+                <a class="page-link" href="{{ path(route, {page: currentPage - 1}|merge(params|default({}))) }}" aria-label="Page précédente">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">&laquo;</span>
+            </li>
+        {% endif %}
+        
+        {# Pages numérotées #}
+        {% set startPage = max(1, currentPage - 2) %}
+        {% set endPage = min(maxPages, startPage + 4) %}
+        {% if endPage - startPage < 4 %}
+            {% set startPage = max(1, endPage - 4) %}
+        {% endif %}
+        
+        {% for i in startPage..endPage %}
+            <li class="page-item {% if i == currentPage %}active{% endif %}">
+                <a class="page-link" href="{{ path(route, {page: i}|merge(params|default({}))) }}">{{ i }}</a>
+            </li>
+        {% endfor %}
+        
+        {# Lien vers la page suivante #}
+        {% if currentPage < maxPages %}
+            <li class="page-item">
+                <a class="page-link" href="{{ path(route, {page: currentPage + 1}|merge(params|default({}))) }}" aria-label="Page suivante">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">&raquo;</span>
+            </li>
+        {% endif %}
+        
+        {# Lien vers la dernière page #}
+        {% if currentPage < maxPages %}
+            <li class="page-item">
+                <a class="page-link" href="{{ path(route, {page: maxPages}|merge(params|default({}))) }}" aria-label="Dernière page">
+                    <span aria-hidden="true">&raquo;&raquo;</span>
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">&raquo;&raquo;</span>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}

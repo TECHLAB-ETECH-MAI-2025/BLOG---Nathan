@@ -16,6 +16,39 @@ class ArticleRepository extends ServiceEntityRepository
         parent::__construct($registry, Article::class);
     }
 
+    /**
+     * Récupère les articles paginés
+     *
+     * @param int $page Le numéro de page
+     * @param int $limit Le nombre d'articles par page
+     * @return array
+     */
+    public function findPaginated(int $page, int $limit): array
+    {
+        $offset = ($page - 1) * $limit;
+
+        return $this->createQueryBuilder('a')
+            ->orderBy('a.id', 'DESC')
+            ->setMaxResults($limit)
+            ->setFirstResult($offset)
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Compte le nombre total d'articles
+     *
+     * @return int
+     */
+    public function countAll(): int
+    {
+        return $this->createQueryBuilder('a')
+            ->select('COUNT(a.id)')
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+
     //    /**
     //     * @return Article[] Returns an array of Article objects
     //     */
