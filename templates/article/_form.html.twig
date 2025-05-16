@@ -1,0 +1,28 @@
+{{ form_start(form, {'attr': {'class': 'needs-validation'}}) }}
+    <div class="mb-3">
+        {{ form_label(form.titre) }}
+        {{ form_widget(form.titre) }}
+        {{ form_errors(form.titre) }}
+    </div>
+    
+    <div class="mb-3">
+        {{ form_label(form.contenu) }}
+        {{ form_widget(form.contenu) }}
+        {{ form_errors(form.contenu) }}
+    </div>
+    
+    <div class="mb-3">
+        <label class="form-label">{{ form_label(form.categories) }}</label>
+        <div class="d-flex flex-wrap gap-3">
+            {% for category in form.categories %}
+                <div class="form-check">
+                    {{ form_widget(category) }}
+                    {{ form_label(category) }}
+                </div>
+            {% endfor %}
+        </div>
+        {{ form_errors(form.categories) }}
+    </div>
+    
+    <button class="btn btn-primary">{{ button_label|default('Enregistrer') }}</button>
+{{ form_end(form) }}
