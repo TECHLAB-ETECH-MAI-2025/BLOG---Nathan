@@ -21,7 +21,7 @@ class ArticleController extends AbstractController
     public function index(ArticleRepository $articleRepository, Request $request): Response
     {
         $page = max(1, $request->query->getInt('page', 1));
-        $limit = 2; // Nombre d'articles par page
+        $limit = 2;
         
         $articles = $articleRepository->findPaginated($page, $limit);
         $total = $articleRepository->countAll();
@@ -103,14 +103,24 @@ class ArticleController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}', name: 'app_article_delete', methods: ['POST'])]
+    #[Route('/{id}/delete', name: 'app_article_delete', methods: ['POST'])]
     public function delete(Request $request, Article $article, EntityManagerInterface $entityManager): Response
     {
         if ($this->isCsrfTokenValid('delete'.$article->getId(), $request->request->get('_token'))) {
+            foreach ($article->getComments() as $comment) {
+                $entityManager->remove($comment);
+            }
             $entityManager->remove($article);
             $entityManager->flush();
+            
+            $this->addFlash('success', 'L\'article a été supprimé avec succès.');
+            
+            return $this->redirectToRoute('app_article_index', [], Response::HTTP_SEE_OTHER);
         }
-
-        return $this->redirectToRoute('app_article_index', [], Response::HTTP_SEE_OTHER);
+        
+        $this->addFlash('error', 'Impossible de supprimer l\'article. Token CSRF invalide.');
+        
+        return $this->redirectToRoute('app_article_show', ['id' => $article->getId()], Response::HTTP_SEE_OTHER);
     }
+
 }
