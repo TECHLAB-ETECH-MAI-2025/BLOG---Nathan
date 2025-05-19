@@ -1,0 +1,13 @@
+<div class="btn-group" role="group">
+    <a href="{{ path('app_article_show', {'id': article.id}) }}" class="btn btn-sm btn-primary">
+        <i class="bi bi-eye"></i>
+    </a>
+    {% if is_granted('ROLE_ADMIN') %}
+        <a href="{{ path('app_article_edit', {'id': article.id}) }}" class="btn btn-sm btn-warning">
+            <i class="bi bi-pencil"></i>
+        </a>
+        <button type="button" class="btn btn-sm btn-danger delete-article" data-id="{{ article.id }}">
+            <i class="bi bi-trash"></i>
+        </button>
+    {% endif %}
+</div>

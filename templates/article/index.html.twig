@@ -4,53 +4,81 @@
 
 {% block body %}
     <h1>Liste des articles</h1>
+
     {% if is_granted('ROLE_ADMIN') %}
         <a href="{{ path('app_article_new') }}" class="btn btn-primary mb-3">Créer un nouvel article</a>
     {% endif %}
-    <div class="row">
-        {% for article in articles %}
-            <div class="col-md-6 mb-4">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <h5 class="card-title">{{ article.titre }}</h5>
-                        <p class="card-text">{{ article.contenu|slice(0, 150) }}...</p>
-                        <div class="mb-2">
-                            {% for category in article.categories %}
-                                <span class="badge bg-secondary">{{ category.nom }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    <div class="card-footer bg-transparent border-top-0">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <a href="{{ path('app_article_show', {'id': article.id}) }}" class="btn btn-primary">Lire</a>
-                                {% if is_granted('ROLE_ADMIN') %}
-                                    <a href="{{ path('app_article_edit', {'id': article.id}) }}" class="btn btn-warning">Modifier</a>
-                                {% endif %}    
-                            </div>
-                            <small class="text-muted">{{ article.comments|length }} commentaire(s)</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        {% else %}
-            <div class="col-12">
-                <p>Aucun article trouvé</p>
-            </div>
-        {% endfor %}
-    </div>
 
-    <div class="d-flex justify-content-between align-items-center mt-4">
-        <div>
-            <p>Affichage de {{ (currentPage - 1) * limit + 1 }} à {{ min(currentPage * limit, total) }} sur {{ total }} articles</p>
-        </div>
-        <div>
-            {% include 'components/_pagination.html.twig' with {
-                currentPage: currentPage,
-                maxPages: maxPages,
-                route: 'app_article_index',
-                params: {}
-            } %}
+    <div class="card">
+        <div class="card-body">
+            <table id="articles-table" class="table table-striped" style="width:100%">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Titre</th>
+                        <th>Contenu</th>
+                        <th>Catégories</th>
+                        <th>Commentaires</th>
+                        <th>J'aime</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Les données seront chargées via AJAX -->
+                </tbody>
+            </table>
         </div>
     </div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+$(document).ready(function() {
+    // Initialiser DataTables
+    var table = $('#articles-table').DataTable({
+        processing: true,
+        serverSide: false, // Changez à false pour le traitement côté client
+        ajax: {
+            url: "{{ path('api_articles') }}",
+            error: function(xhr, error, thrown) {
+                console.error('Erreur AJAX:', xhr.responseText, error, thrown);
+                alert('Erreur lors du chargement des données. Veuillez rafraîchir la page.');
+            }
+        },
+        columns: [
+            { data: 'id' },
+            { data: 'titre' },
+            { data: 'contenu' },
+            { data: 'categories', orderable: false },
+            { data: 'comments' },
+            { data: 'likes' },
+            { data: 'actions', orderable: false }
+        ],
+        language: {
+            url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/fr-FR.json'
+        }
+    });    
+    
+    // Gérer la suppression d'article
+    $('#articles-table').on('click', '.delete-article', function() {
+        var articleId = $(this).data('id');
+        if (confirm('Êtes-vous sûr de vouloir supprimer cet article ?')) {
+            $.ajax({
+                url: '/article/' + articleId + '/delete',
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token('delete') }}' + articleId
+                },
+                success: function() {
+                    table.ajax.reload();
+                    alert('Article supprimé avec succès');
+                },
+                error: function() {
+                    alert('Erreur lors de la suppression de l\'article');
+                }
+            });
+        }
+    });
+});
+</script>
 {% endblock %}
