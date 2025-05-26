@@ -1,0 +1,214 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Chat avec {{ destinataire.email }}{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Conversations</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        <a href="{{ path('app_chat_index') }}" class="list-group-item list-group-item-action">
+                            ← Retour aux conversations
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Conversation avec {{ destinataire.email }}</h5>
+                </div>
+                
+                <div class="card-body" style="height: 400px; overflow-y: auto;" id="messages-container">
+                    <div id="messages-list">
+                        {% for message in messages %}
+                            <div class="message-item mb-3 {% if message.expediteur.id == current_user.id %}text-end{% endif %}">
+                                <div class="d-inline-block p-2 rounded {% if message.expediteur.id == current_user.id %}bg-primary text-white{% else %}bg-light{% endif %}" style="max-width: 70%;">
+                                    <div>{{ message.contenu|nl2br }}</div>
+                                    <small class="{% if message.expediteur.id == current_user.id %}text-light{% else %}text-muted{% endif %}">
+                                        {{ message.createdAt|date('d/m/Y H:i') }}
+                                        {% if message.expediteur.id == current_user.id %}
+                                            {% if message.isRead %}
+                                                <i class="bi bi-check2-all text-info"></i>
+                                            {% else %}
+                                                <i class="bi bi-check2"></i>
+                                            {% endif %}
+                                        {% endif %}
+                                    </small>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div class="card-footer">
+                    <form id="message-form" class="d-flex">
+                        <div class="flex-grow-1 me-2">
+                            <textarea id="message-content" class="form-control" rows="2" placeholder="Tapez votre message..." required></textarea>
+                        </div>
+                        <div class="align-self-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-send"></i> Envoyer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+$(document).ready(function() {
+    var destinataireId = {{ destinataire.id }};
+    var currentUserId = {{ current_user.id }};
+    var lastMessageTime = null;
+    var pollingInterval;
+    
+    // Initialiser le temps du dernier message
+    {% if messages|length > 0 %}
+        lastMessageTime = '{{ messages|last.createdAt|date('Y-m-d H:i:s') }}';
+    {% endif %}
+    
+    // Faire défiler vers le bas au chargement
+    scrollToBottom();
+    
+    // Démarrer le polling pour les nouveaux messages
+    startPolling();
+    
+    // Gérer l'envoi de messages
+    $('#message-form').on('submit', function(e) {
+        e.preventDefault();
+        sendMessage();
+    });
+    
+    // Envoyer le message avec Ctrl+Enter
+    $('#message-content').on('keydown', function(e) {
+        if (e.ctrlKey && e.keyCode === 13) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+    
+    function sendMessage() {
+        var content = $('#message-content').val().trim();
+        
+        if (content === '') {
+            return;
+        }
+        
+        $.ajax({
+            url: '{{ path('api_chat_send', {'id': destinataire.id}) }}',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                contenu: content
+            }),
+            success: function(response) {
+                // Ajouter le message à la liste
+                addMessageToList(response, true);
+                
+                // Vider le formulaire
+                $('#message-content').val('');
+                
+                // Mettre à jour le temps du dernier message
+                lastMessageTime = response.createdAt;
+                
+                // Faire défiler vers le bas
+                scrollToBottom();
+            },
+            error: function(xhr) {
+                var error = JSON.parse(xhr.responseText);
+                alert('Erreur: ' + error.error);
+            }
+        });
+    }
+    
+    function startPolling() {
+        pollingInterval = setInterval(function() {
+            checkForNewMessages();
+        }, 2000); // Vérifier toutes les 2 secondes
+    }
+    
+    function checkForNewMessages() {
+        var url = '{{ path('api_chat_messages', {'id': destinataire.id}) }}';
+        
+        if (lastMessageTime) {
+            url += '?since=' + encodeURIComponent(lastMessageTime);
+        }
+        
+        $.ajax({
+            url: url,
+            type: 'GET',
+            success: function(messages) {
+                if (messages.length > 0) {
+                    messages.forEach(function(message) {
+                        addMessageToList(message, message.expediteur.id === currentUserId);
+                    });
+                    
+                    // Mettre à jour le temps du dernier message
+                    lastMessageTime = messages[messages.length - 1].createdAt;
+                    
+                    // Faire défiler vers le bas
+                    scrollToBottom();
+                }
+            }
+        });
+    }
+    
+    function addMessageToList(message, isCurrentUser) {
+        var messageClass = isCurrentUser ? 'text-end' : '';
+        var bubbleClass = isCurrentUser ? 'bg-primary text-white' : 'bg-light';
+        var timeClass = isCurrentUser ? 'text-light' : 'text-muted';
+        var readIcon = '';
+        
+        if (isCurrentUser) {
+            readIcon = message.isRead ? 
+                '<i class="bi bi-check2-all text-info"></i>' : 
+                '<i class="bi bi-check2"></i>';
+        }
+        
+        var messageHtml = `
+            <div class="message-item mb-3 ${messageClass}">
+                <div class="d-inline-block p-2 rounded ${bubbleClass}" style="max-width: 70%;">
+                    <div>${message.contenu.replace(/\n/g, '<br>')}</div>
+                    <small class="${timeClass}">
+                        ${formatDate(message.createdAt)}
+                        ${readIcon}
+                    </small>
+                </div>
+            </div>
+        `;
+        
+        $('#messages-list').append(messageHtml);
+    }
+    
+    function scrollToBottom() {
+        var container = $('#messages-container');
+        container.scrollTop(container[0].scrollHeight);
+    }
+    
+    function formatDate(dateString) {
+        var date = new Date(dateString);
+        return date.toLocaleDateString('fr-FR') + ' ' + 
+               date.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
+    }
+    
+    // Arrêter le polling quand on quitte la page
+    $(window).on('beforeunload', function() {
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+        }
+    });
+});
+</script>
+{% endblock %}

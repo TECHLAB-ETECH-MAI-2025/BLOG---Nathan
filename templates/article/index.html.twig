@@ -37,7 +37,7 @@ $(document).ready(function() {
     // Initialiser DataTables
     var table = $('#articles-table').DataTable({
         processing: true,
-        serverSide: false, // Changez à false pour le traitement côté client
+        serverSide: false,
         ajax: {
             url: "{{ path('api_articles') }}",
             error: function(xhr, error, thrown) {
