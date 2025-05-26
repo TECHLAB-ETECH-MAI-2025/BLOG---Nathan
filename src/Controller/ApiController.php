@@ -110,7 +110,7 @@ class ApiController extends AbstractController
             // Supprimer le like
             $like = $entityManager->getRepository(Like::class)->findOneBy([
                 'article' => $article,
-                'utilisateur' => $user  // Assurez-vous que ce nom de propriété est correct
+                'utilisateur' => $user
             ]);
             
             if ($like) {
@@ -120,7 +120,7 @@ class ApiController extends AbstractController
             // Ajouter un like
             $like = new Like();
             $like->setArticle($article);
-            $like->setUtilisateur($user);  // Assurez-vous que cette méthode existe
+            $like->setUtilisateur($user);
             $like->setCreatedAt(new \DateTimeImmutable());
             
             $entityManager->persist($like);
