@@ -68,147 +68,165 @@
 
 {% block javascripts %}
 <script>
-$(document).ready(function() {
-    var destinataireId = {{ destinataire.id }};
-    var currentUserId = {{ current_user.id }};
-    var lastMessageTime = null;
-    var pollingInterval;
-    
-    // Initialiser le temps du dernier message
-    {% if messages|length > 0 %}
-        lastMessageTime = '{{ messages|last.createdAt|date('Y-m-d H:i:s') }}';
-    {% endif %}
-    
-    // Faire défiler vers le bas au chargement
-    scrollToBottom();
-    
-    // Démarrer le polling pour les nouveaux messages
-    startPolling();
-    
-    // Gérer l'envoi de messages
-    $('#message-form').on('submit', function(e) {
-        e.preventDefault();
-        sendMessage();
-    });
-    
-    // Envoyer le message avec Ctrl+Enter
-    $('#message-content').on('keydown', function(e) {
-        if (e.ctrlKey && e.keyCode === 13) {
+    $(document).ready(function() {
+        var destinataireId = {{ destinataire.id }};
+        var currentUserId = {{ current_user.id }};
+        var lastMessageTime = null;
+        var pollingInterval;
+        
+        // Initialiser le temps du dernier message au format ISO
+        {% if messages|length > 0 %}
+            lastMessageTime = '{{ messages|last.createdAt|date('c') }}'; // Format ISO 8601
+        {% endif %}
+        
+        // Faire défiler vers le bas au chargement
+        scrollToBottom();
+        
+        // Démarrer le polling pour les nouveaux messages
+        startPolling();
+        
+        // Gérer l'envoi de messages
+        $('#message-form').on('submit', function(e) {
             e.preventDefault();
             sendMessage();
-        }
-    });
-    
-    function sendMessage() {
-        var content = $('#message-content').val().trim();
+        });
         
-        if (content === '') {
-            return;
-        }
-        
-        $.ajax({
-            url: '{{ path('api_chat_send', {'id': destinataire.id}) }}',
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({
-                contenu: content
-            }),
-            success: function(response) {
-                // Ajouter le message à la liste
-                addMessageToList(response, true);
-                
-                // Vider le formulaire
-                $('#message-content').val('');
-                
-                // Mettre à jour le temps du dernier message
-                lastMessageTime = response.createdAt;
-                
-                // Faire défiler vers le bas
-                scrollToBottom();
-            },
-            error: function(xhr) {
-                var error = JSON.parse(xhr.responseText);
-                alert('Erreur: ' + error.error);
+        // Envoyer le message avec Ctrl+Enter
+        $('#message-content').on('keydown', function(e) {
+            if (e.ctrlKey && e.keyCode === 13) {
+                e.preventDefault();
+                sendMessage();
             }
         });
-    }
-    
-    function startPolling() {
-        pollingInterval = setInterval(function() {
-            checkForNewMessages();
-        }, 2000); // Vérifier toutes les 2 secondes
-    }
-    
-    function checkForNewMessages() {
-        var url = '{{ path('api_chat_messages', {'id': destinataire.id}) }}';
         
-        if (lastMessageTime) {
-            url += '?since=' + encodeURIComponent(lastMessageTime);
-        }
-        
-        $.ajax({
-            url: url,
-            type: 'GET',
-            success: function(messages) {
-                if (messages.length > 0) {
-                    messages.forEach(function(message) {
-                        addMessageToList(message, message.expediteur.id === currentUserId);
-                    });
+        function sendMessage() {
+            var content = $('#message-content').val().trim();
+            
+            if (content === '') {
+                return;
+            }
+            
+            $.ajax({
+                url: '{{ path('api_chat_send', {'id': destinataire.id}) }}',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    contenu: content
+                }),
+                success: function(response) {
+                    // Ajouter le message à la liste
+                    addMessageToList(response, true);
                     
-                    // Mettre à jour le temps du dernier message
-                    lastMessageTime = messages[messages.length - 1].createdAt;
+                    // Vider le formulaire
+                    $('#message-content').val('');
+                    
+                    // Mettre à jour le temps du dernier message au format ISO
+                    lastMessageTime = new Date(response.createdAt).toISOString();
                     
                     // Faire défiler vers le bas
                     scrollToBottom();
+                },
+                error: function(xhr) {
+                    var error = JSON.parse(xhr.responseText);
+                    alert('Erreur: ' + error.error);
                 }
+            });
+        }
+        
+        function startPolling() {
+            pollingInterval = setInterval(function() {
+                checkForNewMessages();
+            }, 2000); // Vérifier toutes les 2 secondes
+        }
+        
+        function checkForNewMessages() {
+            var url = '{{ path('api_chat_messages', {'id': destinataire.id}) }}';
+            
+            if (lastMessageTime) {
+                url += '?since=' + encodeURIComponent(lastMessageTime);
+            }
+            
+            $.ajax({
+                url: url,
+                type: 'GET',
+                success: function(messages) {
+                    if (messages.length > 0) {
+                        messages.forEach(function(message) {
+                            addMessageToList(message, message.expediteur.id === currentUserId);
+                        });
+                        
+                        // Mettre à jour le temps du dernier message au format ISO
+                        var lastMessage = messages[messages.length - 1];
+                        lastMessageTime = new Date(lastMessage.createdAt).toISOString();
+                        
+                        // Faire défiler vers le bas
+                        scrollToBottom();
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Erreur lors du polling:', xhr.responseText);
+                }
+            });
+        }
+        
+        function addMessageToList(message, isCurrentUser) {
+            var messageClass = isCurrentUser ? 'text-end' : '';
+            var bubbleClass = isCurrentUser ? 'bg-primary text-white' : 'bg-light';
+            var timeClass = isCurrentUser ? 'text-light' : 'text-muted';
+            var readIcon = '';
+            
+            if (isCurrentUser) {
+                readIcon = message.isRead ? 
+                    '<i class="bi bi-check2-all text-info"></i>' : 
+                    '<i class="bi bi-check2"></i>';
+            }
+            
+            var messageHtml = `
+                <div class="message-item mb-3 ${messageClass}">
+                    <div class="d-inline-block p-2 rounded ${bubbleClass}" style="max-width: 70%;">
+                        <div>${message.contenu.replace(/\n/g, '<br>')}</div>
+                        <small class="${timeClass}">
+                            ${formatDate(message.createdAt)}
+                            ${readIcon}
+                        </small>
+                    </div>
+                </div>
+            `;
+            
+            $('#messages-list').append(messageHtml);
+        }
+        
+        function scrollToBottom() {
+            var container = $('#messages-container');
+            container.scrollTop(container[0].scrollHeight);
+        }
+        
+        function formatDate(dateString) {
+            // Créer un objet Date à partir de la chaîne
+            var date = new Date(dateString);
+            
+            // Vérifier si la date est valide
+            if (isNaN(date.getTime())) {
+                console.error('Date invalide:', dateString);
+                return 'Date invalide';
+            }
+            
+            // Formater la date en français
+            return date.toLocaleDateString('fr-FR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+        
+        // Arrêter le polling quand on quitte la page
+        $(window).on('beforeunload', function() {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
             }
         });
-    }
-    
-    function addMessageToList(message, isCurrentUser) {
-        var messageClass = isCurrentUser ? 'text-end' : '';
-        var bubbleClass = isCurrentUser ? 'bg-primary text-white' : 'bg-light';
-        var timeClass = isCurrentUser ? 'text-light' : 'text-muted';
-        var readIcon = '';
-        
-        if (isCurrentUser) {
-            readIcon = message.isRead ? 
-                '<i class="bi bi-check2-all text-info"></i>' : 
-                '<i class="bi bi-check2"></i>';
-        }
-        
-        var messageHtml = `
-            <div class="message-item mb-3 ${messageClass}">
-                <div class="d-inline-block p-2 rounded ${bubbleClass}" style="max-width: 70%;">
-                    <div>${message.contenu.replace(/\n/g, '<br>')}</div>
-                    <small class="${timeClass}">
-                        ${formatDate(message.createdAt)}
-                        ${readIcon}
-                    </small>
-                </div>
-            </div>
-        `;
-        
-        $('#messages-list').append(messageHtml);
-    }
-    
-    function scrollToBottom() {
-        var container = $('#messages-container');
-        container.scrollTop(container[0].scrollHeight);
-    }
-    
-    function formatDate(dateString) {
-        var date = new Date(dateString);
-        return date.toLocaleDateString('fr-FR') + ' ' + 
-               date.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
-    }
-    
-    // Arrêter le polling quand on quitte la page
-    $(window).on('beforeunload', function() {
-        if (pollingInterval) {
-            clearInterval(pollingInterval);
-        }
     });
-});
-</script>
+    </script>    
 {% endblock %}

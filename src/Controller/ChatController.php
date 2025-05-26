@@ -92,10 +92,11 @@ class ChatController extends AbstractController
                 'id' => $currentUser->getId(),
                 'email' => $currentUser->getEmail()
             ],
-            'createdAt' => $message->getCreatedAt()->format('d/m/Y H:i:s'),
+            'createdAt' => $message->getCreatedAt()->format('c'), // Format ISO 8601
             'isRead' => $message->isRead()
         ]);
     }
+
 
     #[Route('/api/messages/{id}', name: 'api_chat_messages', methods: ['GET'])]
     public function getMessages(User $user, Request $request, MessageRepository $messageRepository): JsonResponse
@@ -106,8 +107,14 @@ class ChatController extends AbstractController
         $since = $request->query->get('since');
         
         if ($since) {
-            $sinceDate = new \DateTimeImmutable($since);
-            $messages = $messageRepository->findNewMessages($currentUser, $user, $sinceDate);
+            try {
+                // Essayer de parser la date au format ISO
+                $sinceDate = new \DateTimeImmutable($since);
+                $messages = $messageRepository->findNewMessages($currentUser, $user, $sinceDate);
+            } catch (\Exception $e) {
+                // Si le parsing échoue, retourner une erreur
+                return new JsonResponse(['error' => 'Format de date invalide'], 400);
+            }
         } else {
             $messages = $messageRepository->findConversation($currentUser, $user);
         }
@@ -125,18 +132,19 @@ class ChatController extends AbstractController
                     'id' => $message->getDestinataire()->getId(),
                     'email' => $message->getDestinataire()->getEmail()
                 ],
-                'createdAt' => $message->getCreatedAt()->format('d/m/Y H:i:s'),
+                'createdAt' => $message->getCreatedAt()->format('c'), // Format ISO 8601
                 'isRead' => $message->isRead()
             ];
         }
         
         // Marquer les nouveaux messages comme lus
-        if ($since) {
+        if ($since && !empty($messages)) {
             $messageRepository->markAsRead($user, $currentUser);
         }
         
         return new JsonResponse($formattedMessages);
     }
+
 
     #[Route('/api/unread-count', name: 'api_chat_unread_count', methods: ['GET'])]
     public function getUnreadCount(MessageRepository $messageRepository): JsonResponse
