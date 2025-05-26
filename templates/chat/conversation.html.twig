@@ -29,7 +29,7 @@
                 <div class="card-body" style="height: 400px; overflow-y: auto;" id="messages-container">
                     <div id="messages-list">
                         {% for message in messages %}
-                            <div class="message-item mb-3 {% if message.expediteur.id == current_user.id %}text-end{% endif %}">
+                            <div class="message-item mb-3 {% if message.expediteur.id == current_user.id %}text-end{% endif %}" data-message-id="{{ message.id }}">
                                 <div class="d-inline-block p-2 rounded {% if message.expediteur.id == current_user.id %}bg-primary text-white{% else %}bg-light{% endif %}" style="max-width: 70%;">
                                     <div>{{ message.contenu|nl2br }}</div>
                                     <small class="{% if message.expediteur.id == current_user.id %}text-light{% else %}text-muted{% endif %}">
@@ -73,25 +73,24 @@
         var currentUserId = {{ current_user.id }};
         var lastMessageTime = null;
         var pollingInterval;
+        var displayedMessages = new Set();
         
         // Initialiser le temps du dernier message au format ISO
         {% if messages|length > 0 %}
-            lastMessageTime = '{{ messages|last.createdAt|date('c') }}'; // Format ISO 8601
+            lastMessageTime = '{{ messages|last.createdAt|date('c') }}';
+            {% for message in messages %}
+                displayedMessages.add({{ message.id }});
+            {% endfor %}
         {% endif %}
         
-        // Faire défiler vers le bas au chargement
         scrollToBottom();
-        
-        // Démarrer le polling pour les nouveaux messages
         startPolling();
         
-        // Gérer l'envoi de messages
         $('#message-form').on('submit', function(e) {
             e.preventDefault();
             sendMessage();
         });
         
-        // Envoyer le message avec Ctrl+Enter
         $('#message-content').on('keydown', function(e) {
             if (e.ctrlKey && e.keyCode === 13) {
                 e.preventDefault();
@@ -106,6 +105,8 @@
                 return;
             }
             
+            $('#message-form button').prop('disabled', true);
+            
             $.ajax({
                 url: '{{ path('api_chat_send', {'id': destinataire.id}) }}',
                 type: 'POST',
@@ -114,21 +115,20 @@
                     contenu: content
                 }),
                 success: function(response) {
-                    // Ajouter le message à la liste
-                    addMessageToList(response, true);
-                    
-                    // Vider le formulaire
+                    if (!displayedMessages.has(response.id)) {
+                        addMessageToList(response, true);
+                        displayedMessages.add(response.id);
+                        lastMessageTime = response.createdAt;
+                        scrollToBottom();
+                    }
                     $('#message-content').val('');
-                    
-                    // Mettre à jour le temps du dernier message au format ISO
-                    lastMessageTime = new Date(response.createdAt).toISOString();
-                    
-                    // Faire défiler vers le bas
-                    scrollToBottom();
                 },
                 error: function(xhr) {
                     var error = JSON.parse(xhr.responseText);
                     alert('Erreur: ' + error.error);
+                },
+                complete: function() {
+                    $('#message-form button').prop('disabled', false);
                 }
             });
         }
@@ -136,7 +136,8 @@
         function startPolling() {
             pollingInterval = setInterval(function() {
                 checkForNewMessages();
-            }, 2000); // Vérifier toutes les 2 secondes
+                updateReadStatus(); // Nouvelle fonction pour mettre à jour le statut "vu"
+            }, 2000);
         }
         
         function checkForNewMessages() {
@@ -151,22 +152,57 @@
                 type: 'GET',
                 success: function(messages) {
                     if (messages.length > 0) {
+                        var hasNewMessages = false;
+                        
                         messages.forEach(function(message) {
-                            addMessageToList(message, message.expediteur.id === currentUserId);
+                            if (!displayedMessages.has(message.id)) {
+                                addMessageToList(message, message.expediteur.id === currentUserId);
+                                displayedMessages.add(message.id);
+                                hasNewMessages = true;
+                            }
                         });
                         
-                        // Mettre à jour le temps du dernier message au format ISO
-                        var lastMessage = messages[messages.length - 1];
-                        lastMessageTime = new Date(lastMessage.createdAt).toISOString();
-                        
-                        // Faire défiler vers le bas
-                        scrollToBottom();
+                        if (hasNewMessages) {
+                            var lastMessage = messages[messages.length - 1];
+                            lastMessageTime = lastMessage.createdAt;
+                            scrollToBottom();
+                        }
                     }
                 },
                 error: function(xhr, status, error) {
                     console.error('Erreur lors du polling:', xhr.responseText);
                 }
             });
+        }
+        
+        // Nouvelle fonction pour mettre à jour le statut "vu"
+        function updateReadStatus() {
+            $.ajax({
+                url: '{{ path('api_chat_messages', {'id': destinataire.id}) }}',
+                type: 'GET',
+                success: function(messages) {
+                    messages.forEach(function(message) {
+                        if (message.expediteur.id === currentUserId) {
+                            // Mettre à jour l'icône de lecture pour nos messages
+                            updateMessageReadIcon(message.id, message.isRead);
+                        }
+                    });
+                }
+            });
+        }
+        
+        function updateMessageReadIcon(messageId, isRead) {
+            var messageElement = $('[data-message-id="' + messageId + '"]');
+            if (messageElement.length > 0) {
+                var iconElement = messageElement.find('small i');
+                if (iconElement.length > 0) {
+                    if (isRead) {
+                        iconElement.removeClass('bi-check2').addClass('bi-check2-all text-info');
+                    } else {
+                        iconElement.removeClass('bi-check2-all text-info').addClass('bi-check2');
+                    }
+                }
+            }
         }
         
         function addMessageToList(message, isCurrentUser) {
@@ -176,13 +212,13 @@
             var readIcon = '';
             
             if (isCurrentUser) {
-                readIcon = message.isRead ? 
-                    '<i class="bi bi-check2-all text-info"></i>' : 
+                readIcon = message.isRead ?
+                    '<i class="bi bi-check2-all text-info"></i>' :
                     '<i class="bi bi-check2"></i>';
             }
             
             var messageHtml = `
-                <div class="message-item mb-3 ${messageClass}">
+                <div class="message-item mb-3 ${messageClass}" data-message-id="${message.id}">
                     <div class="d-inline-block p-2 rounded ${bubbleClass}" style="max-width: 70%;">
                         <div>${message.contenu.replace(/\n/g, '<br>')}</div>
                         <small class="${timeClass}">
@@ -202,16 +238,14 @@
         }
         
         function formatDate(dateString) {
-            // Créer un objet Date à partir de la chaîne
             var date = new Date(dateString);
             
-            // Vérifier si la date est valide
             if (isNaN(date.getTime())) {
                 console.error('Date invalide:', dateString);
                 return 'Date invalide';
             }
             
-            // Formater la date en français
+            // Utiliser la timezone locale du navigateur
             return date.toLocaleDateString('fr-FR', {
                 day: '2-digit',
                 month: '2-digit',
@@ -221,12 +255,12 @@
             });
         }
         
-        // Arrêter le polling quand on quitte la page
         $(window).on('beforeunload', function() {
             if (pollingInterval) {
                 clearInterval(pollingInterval);
             }
         });
     });
-    </script>    
+</script>
 {% endblock %}
+
