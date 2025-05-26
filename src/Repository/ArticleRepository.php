@@ -48,6 +48,76 @@ class ArticleRepository extends ServiceEntityRepository
             ->getSingleScalarResult();
     }
 
+    /**
+     * Trouve les articles pour DataTables avec filtrage, tri et pagination
+     */
+    public function findForDataTable(int $start, int $length, ?string $search, string $orderBy, string $orderDir): array
+    {
+        $qb = $this->createQueryBuilder('a')
+            ->leftJoin('a.categories', 'c')
+            ->leftJoin('a.comments', 'co')
+            ->leftJoin('a.likes', 'l');
+        
+        // Appliquer la recherche
+        if ($search) {
+            $qb->andWhere('a.titre LIKE :search OR a.contenu LIKE :search OR c.nom LIKE :search')
+               ->setParameter('search', '%' . $search . '%');
+        }
+        
+        // Compter le nombre total d'articles
+        $totalQb = clone $qb;
+        $totalCount = $totalQb->select('COUNT(DISTINCT a.id)')
+            ->getQuery()
+            ->getSingleScalarResult();
+        
+        // Appliquer le tri
+        if ($orderBy) {
+            $qb->orderBy($orderBy, $orderDir);
+        }
+        
+        // Appliquer la pagination
+        $qb->setFirstResult($start)
+           ->setMaxResults($length)
+           ->groupBy('a.id');
+        
+        // Récupérer les résultats
+        $articles = $qb->getQuery()->getResult();
+        
+        // Compter le nombre d'articles filtrés
+        $filteredCount = $totalCount;
+        if ($search) {
+            $filteredQb = $this->createQueryBuilder('a')
+                ->select('COUNT(DISTINCT a.id)')
+                ->leftJoin('a.categories', 'c')
+                ->andWhere('a.titre LIKE :search OR a.contenu LIKE :search OR c.nom LIKE :search')
+                ->setParameter('search', '%' . $search . '%');
+            
+            $filteredCount = $filteredQb->getQuery()->getSingleScalarResult();
+        }
+        
+        return [
+            'data' => $articles,
+            'totalCount' => $totalCount,
+            'filteredCount' => $filteredCount
+        ];
+    }
+
+    /**
+     * Recherche des articles par terme
+     */
+    public function searchByTerm(string $term): array
+    {
+        return $this->createQueryBuilder('a')
+            ->where('a.titre LIKE :term')
+            ->orWhere('a.contenu LIKE :term')
+            ->setParameter('term', '%' . $term . '%')
+            ->setMaxResults(10)
+            ->getQuery()
+            ->getResult();
+    }
+
+
+
 
     //    /**
     //     * @return Article[] Returns an array of Article objects

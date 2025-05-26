@@ -4,74 +4,196 @@
 
 {% block body %}
     <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h1>{{ article.titre }}</h1>
-            {% if is_granted('ROLE_ADMIN') %}
-                <div>
-                    <a href="{{ path('app_article_edit', {'id': article.id}) }}" class="btn btn-warning">Modifier</a>
-                </div>
-            {% endif %}
-        </div>
         <div class="card-body">
+            <h1 class="card-title">{{ article.titre }}</h1>
             <div class="mb-3">
                 {% for category in article.categories %}
                     <span class="badge bg-secondary">{{ category.nom }}</span>
                 {% endfor %}
             </div>
-            <p>{{ article.contenu|nl2br }}</p>
+            <div class="card-text">
+                {{ article.contenu|nl2br }}
+            </div>
+            
+            <div class="mt-3">
+                <button id="like-button" class="btn btn-outline-primary" data-id="{{ article.id }}">
+                    <i class="bi bi-heart"></i> <span id="likes-count">{{ article.likes|length }}</span> J'aime
+                </button>                
+            </div>
         </div>
         <div class="card-footer">
-            {% if is_granted('ROLE_ADMIN') %}
-                <form method="post" action="{{ path('app_article_delete', {'id': article.id}) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cet article?');">
-                    <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ article.id) }}">
-                    <button class="btn btn-danger">Supprimer</button>
-                </form>
-            {% endif %}
+            <div class="d-flex justify-content-between">
+                <div>
+                    {% if is_granted('ROLE_ADMIN') %}
+                        <a href="{{ path('app_article_edit', {'id': article.id}) }}" class="btn btn-warning">Modifier</a>
+                        <form method="post" action="{{ path('app_article_delete', {'id': article.id}) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cet article?');" style="display: inline-block;">
+                            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ article.id) }}">
+                            <button class="btn btn-danger">Supprimer</button>
+                        </form>
+                    {% endif %}
+                </div>
+                <a href="{{ path('app_article_index') }}" class="btn btn-secondary">Retour à la liste</a>
+            </div>
         </div>
     </div>
 
     <div class="card mb-4">
         <div class="card-header">
-            <h2>Commentaires ({{ article.comments|length }})</h2>
+            <h3>Commentaires (<span id="comments-count">0</span>)</h3>
         </div>
         <div class="card-body">
-            {% if article.comments|length > 0 %}
-                {% for comment in article.commentsSortedByDate %}
-                    <div class="card mb-3">
-                        <div class="card-body">
-                            <h5 class="card-title">{{ comment.auteur }}</h5>
-                            <h6 class="card-subtitle mb-2 text-muted">{{ comment.createdAt|date('d/m/Y H:i') }}</h6>
-                            <p class="card-text">{{ comment.contenu|nl2br }}</p>
-                        </div>
-                    </div>
-                {% endfor %}
-            {% else %}
-                <p>Aucun commentaire pour cet article.</p>
-            {% endif %}
+            <div id="comments-list" class="mb-4">
+                <!-- Les commentaires seront chargés ici via AJAX -->
+            </div>
             
+            <div class="card">
+                <div class="card-body">
+                    <h4>Ajouter un commentaire</h4>
+                    <form id="comment-form">
+                        {% if not app.user %}
+                            <div class="mb-3">
+                                <label for="comment-auteur" class="form-label">Votre nom</label>
+                                <input type="text" class="form-control" id="comment-auteur" required>
+                            </div>
+                        {% endif %}
+                        <div class="mb-3">
+                            <label for="comment-contenu" class="form-label">Votre commentaire</label>
+                            <textarea class="form-control" id="comment-contenu" rows="3" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Envoyer</button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
+{% endblock %}
 
-    <div class="card mb-4">
-        <div class="card-header">
-            <h2>Ajouter un commentaire</h2>
-        </div>
-        <div class="card-body">
-            {{ form_start(commentForm) }}
-                <div class="mb-3">
-                    {{ form_label(commentForm.auteur) }}
-                    {{ form_widget(commentForm.auteur) }}
-                    {{ form_errors(commentForm.auteur) }}
+{% block javascripts %}
+<script>
+$(document).ready(function() {
+    // Charger les commentaires
+    loadComments();
+    loadLikes();
+    
+    // Gérer l'envoi du formulaire de commentaire
+    $('#comment-form').on('submit', function(e) {
+        e.preventDefault();
+        
+        var commentData = {
+            contenu: $('#comment-contenu').val()
+        };
+        
+        {% if not app.user %}
+            commentData.auteur = $('#comment-auteur').val();
+        {% endif %}
+        
+        $.ajax({
+            url: '{{ path('api_comments_add', {'id': article.id}) }}',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(commentData),
+            success: function(response) {
+                // Ajouter le nouveau commentaire à la liste
+                addCommentToList(response);
+                
+                // Réinitialiser le formulaire
+                $('#comment-form')[0].reset();
+                
+                // Mettre à jour le compteur
+                $('#comments-count').text(parseInt($('#comments-count').text()) + 1);
+            },
+            error: function() {
+                alert('Erreur lors de l\'ajout du commentaire');
+            }
+        });
+    });
+    
+    // Fonction pour charger les commentaires
+    function loadComments() {
+        $.ajax({
+            url: '{{ path('api_comments', {'id': article.id}) }}',
+            type: 'GET',
+            success: function(comments) {
+                $('#comments-list').empty();
+                
+                if (comments.length === 0) {
+                    $('#comments-list').html('<p>Aucun commentaire pour le moment. Soyez le premier à commenter !</p>');
+                } else {
+                    comments.forEach(function(comment) {
+                        addCommentToList(comment);
+                    });
+                }
+                
+                $('#comments-count').text(comments.length);
+            },
+            error: function() {
+                $('#comments-list').html('<p>Erreur lors du chargement des commentaires</p>');
+            }
+        });
+    }
+    
+    // Fonction pour ajouter un commentaire à la liste
+    function addCommentToList(comment) {
+        var commentHtml = `
+            <div class="card mb-2">
+                <div class="card-body">
+                    <h5 class="card-title">${comment.auteur}</h5>
+                    <h6 class="card-subtitle mb-2 text-muted">${comment.date}</h6>
+                    <p class="card-text">${comment.contenu}</p>
                 </div>
-                <div class="mb-3">
-                    {{ form_label(commentForm.contenu) }}
-                    {{ form_widget(commentForm.contenu) }}
-                    {{ form_errors(commentForm.contenu) }}
-                </div>
-                <button type="submit" class="btn btn-primary">Publier</button>
-            {{ form_end(commentForm) }}
-        </div>
-    </div>
+            </div>
+        `;
+        
+        $('#comments-list').append(commentHtml);
+    }
 
-    <a href="{{ path('app_article_index') }}" class="btn btn-secondary">Retour à la liste</a>
+    // Gérer le clic sur le bouton "J'aime"
+    $('#like-button').on('click', function() {
+        {% if app.user %}
+            $.ajax({
+                url: '{{ path('api_likes_toggle', {'id': article.id}) }}',
+                type: 'POST',
+                success: function(response) {
+                    console.log('Réponse API:', response); // Ajoutez cette ligne
+                    updateLikeButton(response.count, response.liked);
+                },
+                error: function(xhr, status, error) {
+                    console.error('Erreur:', xhr.responseText);
+                    alert('Erreur lors de l\'action "J\'aime"');
+                }
+            });
+        {% else %}
+            alert('Vous devez être connecté pour aimer un article');
+        {% endif %}
+    });
+    
+
+    // Fonction pour charger le nombre de likes
+    function loadLikes() {
+        $.ajax({
+            url: '{{ path('api_likes_count', {'id': article.id}) }}',
+            type: 'GET',
+            success: function(response) {
+                updateLikeButton(response.count, response.liked);
+            }
+        });
+    }
+
+    // Fonction pour mettre à jour le bouton "J'aime"
+    function updateLikeButton(count, liked) {
+        // Mettre à jour le compteur avec la valeur reçue de l'API
+        $('#likes-count').text(count);
+        
+        if (liked) {
+            $('#like-button').removeClass('btn-outline-primary').addClass('btn-primary');
+            $('#like-button i').removeClass('bi-heart').addClass('bi-heart-fill');
+        } else {
+            $('#like-button').removeClass('btn-primary').addClass('btn-outline-primary');
+            $('#like-button i').removeClass('bi-heart-fill').addClass('bi-heart');
+        }
+    }
+
+
+});
+</script>
 {% endblock %}
