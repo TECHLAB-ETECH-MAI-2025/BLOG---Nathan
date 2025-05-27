@@ -16,7 +16,7 @@ class MessageRepository extends ServiceEntityRepository
 
     /**
      * Récupère la conversation entre deux utilisateurs
-     */
+    */
     public function findConversation(User $user1, User $user2, int $limit = 50): array
     {
         return $this->createQueryBuilder('m')
@@ -31,7 +31,7 @@ class MessageRepository extends ServiceEntityRepository
 
     /**
      * Récupère les nouveaux messages depuis une date donnée
-     */
+    */
     public function findNewMessages(User $user1, User $user2, \DateTimeImmutable $since): array
     {
         return $this->createQueryBuilder('m')
@@ -47,7 +47,7 @@ class MessageRepository extends ServiceEntityRepository
 
     /**
      * Récupère la liste des conversations d'un utilisateur
-     */
+    */
     public function findUserConversations(User $user): array
     {
         $qb = $this->createQueryBuilder('m')
@@ -62,7 +62,7 @@ class MessageRepository extends ServiceEntityRepository
 
     /**
      * Marque les messages comme lus
-     */
+    */
     public function markAsRead(User $expediteur, User $destinataire): void
     {
         $this->createQueryBuilder('m')
@@ -78,7 +78,7 @@ class MessageRepository extends ServiceEntityRepository
 
     /**
      * Compte les messages non lus pour un utilisateur
-     */
+    */
     public function countUnreadMessages(User $user): int
     {
         return $this->createQueryBuilder('m')
