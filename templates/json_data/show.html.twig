@@ -1,0 +1,90 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}
+    {% if post %}Post #{{ post.id }} - {{ post.title|slice(0, 50) }}{% else %}Post non trouvé{% endif %}
+{% endblock %}
+
+{% block body %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{{ path('app_posts') }}">Posts</a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">
+                        {% if post %}Post #{{ post.id }}{% else %}Erreur{% endif %}
+                    </li>
+                </ol>
+            </nav>
+            
+            {% if error %}
+                <div class="alert alert-danger">
+                    <strong>Erreur:</strong> {{ error }}
+                </div>
+                <a href="{{ path('app_posts') }}" class="btn btn-primary">
+                    ← Retour à la liste
+                </a>
+            {% endif %}
+
+            {% if success and post %}
+                <article class="card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h1 class="h3 mb-1">{{ post.title|title }}</h1>
+                                <small class="text-muted">
+                                    <i class="bi bi-person"></i> Utilisateur {{ post.userId }} | 
+                                    <i class="bi bi-hash"></i> Post #{{ post.id }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="post-content">
+                            {{ post.body|nl2br }}
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ path('app_posts') }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Retour à la liste
+                            </a>
+                            <div>
+                                {% if post.id > 1 %}
+                                    <a href="{{ path('app_posts_show', {'id': post.id - 1}) }}" class="btn btn-outline-primary me-2">
+                                        <i class="bi bi-chevron-left"></i> Précédent
+                                    </a>
+                                {% endif %}
+                                {% if post.id < 100 %}
+                                    <a href="{{ path('app_posts_show', {'id': post.id + 1}) }}" class="btn btn-outline-primary">
+                                        Suivant <i class="bi bi-chevron-right"></i>
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </article>
+                
+                <!-- Section pour afficher les données JSON brutes (optionnel) -->
+                <div class="mt-4">
+                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#rawData">
+                        <i class="bi bi-code"></i> Voir les données JSON
+                    </button>
+                    <div class="collapse mt-3" id="rawData">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0">Données JSON brutes</h6>
+                            </div>
+                            <div class="card-body">
+                                <pre class="bg-light p-3 mb-0"><code>{{ post|json_encode(constant('JSON_PRETTY_PRINT')) }}</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

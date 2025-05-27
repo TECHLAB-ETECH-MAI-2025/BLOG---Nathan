@@ -1,0 +1,596 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Convertisseur de Devises Visa{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .currency-card {
+            transition: transform 0.2s;
+            border: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .currency-card:hover {
+            transform: translateY(-2px);
+        }
+        .result-card {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+        }
+        .visa-badge {
+            background: linear-gradient(135deg, #1a1f71 0%, #0f4c75 100%);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+        .exchange-icon {
+            font-size: 2rem;
+            color: #28a745;
+        }
+        .api-details {
+            background-color: #f8f9fa;
+            border-left: 4px solid #007bff;
+        }
+        
+        /* Styles pour le convertisseur */
+        .form-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .form-card .card-header {
+            background: rgba(255,255,255,0.1);
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .form-card .form-control,
+        .form-card .form-select {
+            background: rgba(255,255,255,0.9);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: #333;
+        }
+        
+        .form-card .form-control:focus,
+        .form-card .form-select:focus {
+            background: white;
+            border-color: #ffd700;
+            box-shadow: 0 0 0 0.2rem rgba(255,215,0,0.25);
+        }
+        
+        .form-card label {
+            color: rgba(255,255,255,0.9);
+            font-weight: 500;
+        }
+        
+        .form-card .form-text {
+            color: rgba(255,255,255,0.7);
+        }
+        
+        .example-conversion {
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .example-conversion:hover {
+            background: rgba(0,123,255,0.1);
+            border-color: rgba(0,123,255,0.3);
+            transform: translateY(-2px);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #ffd700 0%, #ffb347 100%);
+            border: none;
+            color: #333;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #ffb347 0%, #ffd700 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(255,215,0,0.3);
+        }
+        
+        .btn-exchange {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            border-radius: 50px;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+        }
+        
+        .btn-exchange:hover {
+            background: rgba(255,255,255,0.3);
+            color: white;
+            transform: rotate(180deg);
+            transition: transform 0.3s ease;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- En-tête -->
+            <div class="text-center mb-5">
+                <h1 class="display-4 mb-3">
+                    <i class="bi bi-currency-exchange text-primary"></i>
+                    Convertisseur de Devises
+                </h1>
+                <div class="visa-badge mb-3">
+                    <i class="bi bi-credit-card"></i> Powered by Visa Exchange Rates
+                </div>
+                <p class="lead text-muted">Convertissez vos devises avec les taux de change officiels de Visa</p>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        <h6><i class="bi bi-info-circle"></i> Informations importantes :</h6>
+                        <ul class="mb-0">
+                            <li><strong>Devises Visa ✓</strong> : Taux de change réels fournis par l'API Visa</li>
+                            <li><strong>Autres devises</strong> : Taux fictifs utilisés pour la démonstration</li>
+                            <li><strong>Date</strong> : Seules les dates passées sont acceptées par l'API Visa</li>
+                            <li><strong>Limite</strong> : Maximum 1 an dans le passé</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Navigation -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <nav class="nav nav-pills nav-fill">
+                        <a class="nav-link active" href="{{ path('app_convertisseur_devise') }}">
+                            <i class="bi bi-calculator"></i> Convertisseur
+                        </a>
+                        <a class="nav-link" href="{{ path('app_convertisseur_historique') }}">
+                            <i class="bi bi-clock-history"></i> Historique
+                        </a>
+                    </nav>
+                </div>
+            </div>
+            
+            <div class="row">
+                <!-- Formulaire -->
+                <div class="col-lg-6">
+                    <div class="card form-card">
+                        <div class="card-header">
+                            <h4 class="mb-0">
+                                <i class="bi bi-currency-exchange"></i>
+                                Convertisseur de Devises
+                            </h4>
+                        </div>
+                        <div class="card-body">
+                            {{ form_start(form, {'attr': {'id': 'conversion-form'}}) }}
+                            
+                            <div class="row">
+                                <div class="col-12 mb-3">
+                                    {{ form_row(form.montant) }}
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    {{ form_row(form.deviseSource, {'attr': {'id': 'devise-source'}}) }}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    {{ form_row(form.deviseCible, {'attr': {'id': 'devise-cible'}}) }}
+                                </div>
+                            </div>
+                            
+                            <!-- Bouton d'échange des devises -->
+                            <div class="text-center mb-3">
+                                <button type="button" id="btn-exchange" class="btn btn-exchange">
+                                    <i class="bi bi-arrow-left-right"></i> Échanger les devises
+                                </button>
+                            </div>
+                            
+                            <!-- Avertissement dynamique pour les devises -->
+                            <div id="devise-warning" class="alert alert-warning d-none mb-3">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                <span id="warning-text"></span>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    {{ form_row(form.dateTransaction) }}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    {{ form_row(form.fraisBancaires) }}
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid">
+                                {{ form_row(form.submit) }}
+                            </div>
+                            
+                            {{ form_end(form) }}
+                        </div>
+                    </div>
+                    
+                    <!-- Exemples de conversions -->
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="bi bi-lightbulb"></i>
+                                Exemples de conversions
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <div class="example-conversion" data-source="EUR" data-target="USD" data-amount="1000">
+                                        <i class="bi bi-arrow-right-circle text-primary"></i>
+                                        <div class="small">EUR → USD</div>
+                                        <div class="fw-bold">1000 €</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="example-conversion" data-source="USD" data-target="EUR" data-amount="1000">
+                                        <i class="bi bi-arrow-right-circle text-success"></i>
+                                        <div class="small">USD → EUR</div>
+                                        <div class="fw-bold">1000 $</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="example-conversion" data-source="EUR" data-target="MGA" data-amount="20000">
+                                        <i class="bi bi-arrow-right-circle text-warning"></i>
+                                        <div class="small">EUR → MGA</div>
+                                        <div class="fw-bold">20000 €</div>
+                                        <div class="small text-muted">(Fictif)</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Résultats -->
+                <div class="col-lg-6">
+                    {% if resultat %}
+                        <div class="card result-card mb-4">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h4 class="mb-0">
+                                    <i class="bi bi-check-circle"></i>
+                                    Résultat de la Conversion
+                                </h4>
+                                {% if resultat.is_fallback %}
+                                    <span class="badge bg-warning">
+                                        <i class="bi bi-exclamation-triangle"></i> Mode Fallback
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle"></i> API Visa
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <div class="card-body">
+                                {% if resultat.is_fallback %}
+                                    <div class="alert alert-warning mb-3">
+                                        <i class="bi bi-exclamation-triangle"></i>
+                                        <strong>API Visa indisponible</strong><br>
+                                        Erreur: {{ resultat.api_error }}<br>
+                                        <small>Taux fictifs utilisés pour la démonstration</small>
+                                    </div>
+                                {% endif %}
+                                
+                                <div class="row text-center">
+                                    <div class="col-12 mb-3">
+                                        <h2 class="display-6">{{ resultat.montant_formate_source }}</h2>
+                                        <i class="bi bi-arrow-down exchange-icon"></i>
+                                        <h2 class="display-6">{{ resultat.montant_formate_converti }}</h2>
+                                    </div>
+                                </div>
+                                
+                                <hr class="border-light">
+                                
+                                <div class="row">
+                                    <div class="col-6">
+                                        <small class="text-light">Taux de change</small>
+                                        <div class="fw-bold">1 {{ resultat.conversion.deviseSource }} = {{ resultat.taux_formate }} {{ resultat.conversion.deviseCible }}</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-light">Date</small>
+                                        <div class="fw-bold">{{ resultat.date_conversion_visa }}</div>
+                                    </div>
+                                </div>
+                                
+                                {% if resultat.conversion.fraisBancaires > 0 %}
+                                    <div class="mt-2">
+                                        <small class="text-light">Frais appliqués</small>
+                                        <div class="fw-bold">{{ resultat.conversion.fraisBancaires }}%</div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Détails de l'API et Debug -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">
+                                    <button class="btn btn-link" type="button" data-bs-toggle="collapse" data-bs-target="#apiDetails">
+                                        <i class="bi bi-info-circle"></i>
+                                        {% if resultat.is_fallback %}
+                                            Détails du Debug
+                                        {% else %}
+                                            Détails de l'API Visa
+                                        {% endif %}
+                                    </button>
+                                </h5>
+                            </div>
+                            <div id="apiDetails" class="collapse">
+                                <div class="card-body api-details">
+                                    <h6>URL de l'API :</h6>
+                                    <div class="mb-3">
+                                        <code class="small d-block p-2 bg-light">{{ resultat.url_api }}</code>
+                                        <a href="{{ resultat.url_api }}" target="_blank" class="btn btn-sm btn-outline-primary mt-1">
+                                            <i class="bi bi-box-arrow-up-right"></i> Tester dans le navigateur
+                                        </a>
+                                    </div>
+                                    
+                                    {% if resultat.is_fallback %}
+                                        <div class="alert alert-info">
+                                            <h6>Informations de Debug :</h6>
+                                            <ul class="mb-0">
+                                                <li><strong>Erreur API :</strong> {{ resultat.api_error }}</li>
+                                                <li><strong>Mode :</strong> Fallback avec taux fictifs</li>
+                                                <li><strong>Taux utilisé :</strong> {{ resultat.taux_formate }}</li>
+                                            </ul>
+                                        </div>
+                                    {% endif %}
+                                    
+                                    <h6 class="mt-3">Réponse {% if resultat.is_fallback %}simulée{% else %}de Visa{% endif %} :</h6>
+                                    <pre class="bg-light p-2 small"><code>{{ resultat.donnees_visa|json_encode(constant('JSON_PRETTY_PRINT')) }}</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="card">
+                            <div class="card-body text-center text-muted">
+                                <i class="bi bi-calculator display-1 mb-3"></i>
+                                <h5>Prêt pour la conversion</h5>
+                                <p>Remplissez le formulaire et cliquez sur "Convertir avec Visa" pour obtenir les taux de change.</p>
+                                
+                                <div class="mt-4">
+                                    <h6>Test de l'API :</h6>
+                                    <a href="{{ path('app_convertisseur_test_api') }}" target="_blank" class="btn btn-sm btn-outline-info">
+                                        <i class="bi bi-bug"></i> Tester l'API Visa
+                                    </a>
+                                </div>
+                                
+                                <div class="mt-3">
+                                    <h6>Exemple d'URL générée :</h6>
+                                    <small class="text-muted">
+                                        <code>https://www.visa.fr/cmsapi/fx/rates?amount=20000&fee=0&fromCurr=EUR&toCurr=MGA</code>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Éléments du DOM
+            const deviseSource = document.getElementById('devise-source');
+            const deviseCible = document.getElementById('devise-cible');
+            const warning = document.getElementById('devise-warning');
+            const warningText = document.getElementById('warning-text');
+            const form = document.getElementById('conversion-form');
+            const btnExchange = document.getElementById('btn-exchange');
+            const montantInput = document.querySelector('input[name="conversion_devise[montant]"]');
+            
+            // Devises supportées par Visa (liste complète)
+            const devisesVisa = [
+                'USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'HKD', 'SGD', 
+                'SEK', 'NOK', 'DKK', 'PLN', 'CZK', 'HUF', 'RUB', 'TRY', 'BRL', 'MXN', 
+                'ZAR', 'INR', 'KRW', 'THB', 'MYR', 'IDR', 'PHP', 'VND', 'NZD'
+            ];
+            
+            // Fonction pour vérifier les devises sélectionnées
+            function checkDevises() {
+                if (!deviseSource || !deviseCible) return;
+                
+                const source = deviseSource.value;
+                const cible = deviseCible.value;
+                
+                if (source && cible) {
+                    const sourceVisa = devisesVisa.includes(source);
+                    const cibleVisa = devisesVisa.includes(cible);
+                    
+                    // Vérifier si les devises sont identiques
+                    if (source === cible) {
+                        warningText.textContent = 'Les devises source et cible doivent être différentes.';
+                        warning.classList.remove('d-none');
+                        warning.className = 'alert alert-danger mb-3';
+                        return;
+                    }
+                    
+                    // Vérifier si une ou les deux devises ne sont pas supportées par Visa
+                    if (!sourceVisa || !cibleVisa) {
+                        const nonVisa = [];
+                        if (!sourceVisa) nonVisa.push(source);
+                        if (!cibleVisa) nonVisa.push(cible);
+                        
+                        warningText.innerHTML = `
+                            <strong>Attention :</strong> ${nonVisa.join(', ')} utilise${nonVisa.length > 1 ? 'nt' : ''} des taux fictifs.<br>
+                            <small>L'API Visa n'est pas disponible pour cette${nonVisa.length > 1 ? 's' : ''} devise${nonVisa.length > 1 ? 's' : ''}.</small>
+                        `;
+                        warning.classList.remove('d-none');
+                        warning.className = 'alert alert-warning mb-3';
+                    } else {
+                        // Toutes les devises sont supportées par Visa
+                        warningText.innerHTML = `
+                            <strong>Parfait !</strong> ${source} et ${cible} sont supportées par l'API Visa.<br>
+                            <small>Vous obtiendrez des taux de change officiels en temps réel.</small>
+                        `;
+                        warning.classList.remove('d-none');
+                        warning.className = 'alert alert-success mb-3';
+                    }
+                } else {
+                    warning.classList.add('d-none');
+                }
+            }
+            
+            // Fonction pour échanger les devises
+            function exchangeDevises() {
+                if (!deviseSource || !deviseCible) return;
+                
+                const temp = deviseSource.value;
+                deviseSource.value = deviseCible.value;
+                deviseCible.value = temp;
+                
+                // Animation du bouton
+                btnExchange.style.transform = 'rotate(180deg)';
+                setTimeout(() => {
+                    btnExchange.style.transform = 'rotate(0deg)';
+                }, 300);
+                
+                checkDevises();
+            }
+            
+            // Fonction pour remplir le formulaire avec un exemple
+            function fillExample(source, target, amount) {
+                if (deviseSource) deviseSource.value = source;
+                if (deviseCible) deviseCible.value = target;
+                if (montantInput) montantInput.value = amount;
+                checkDevises();
+                
+                // Animation pour attirer l'attention
+                form.style.transform = 'scale(1.02)';
+                setTimeout(() => {
+                    form.style.transform = 'scale(1)';
+                }, 200);
+            }
+            
+            // Validation de la date
+            function validateDate() {
+                const dateInput = document.querySelector('input[name="conversion_devise[dateTransaction]"]');
+                if (!dateInput) return;
+                
+                dateInput.addEventListener('change', function() {
+                    const selectedDate = new Date(this.value);
+                    const today = new Date();
+                    const oneYearAgo = new Date();
+                    oneYearAgo.setFullYear(today.getFullYear() - 1);
+                    
+                    if (selectedDate > today) {
+                        alert('⚠️ La date ne peut pas être dans le futur.\nL\'API Visa n\'accepte que les dates passées.');
+                        this.value = today.toISOString().split('T')[0];
+                    } else if (selectedDate < oneYearAgo) {
+                        alert('⚠️ La date ne peut pas être antérieure à un an.\nUtilisation de la date limite autorisée.');
+                        this.value = oneYearAgo.toISOString().split('T')[0];
+                    }
+                });
+            }
+            
+            // Validation du montant
+            function validateMontant() {
+                if (!montantInput) return;
+                
+                montantInput.addEventListener('input', function() {
+                    const value = parseFloat(this.value);
+                    if (value <= 0) {
+                        this.setCustomValidity('Le montant doit être supérieur à 0');
+                    } else if (value > 1000000) {
+                        this.setCustomValidity('Le montant ne peut pas dépasser 1 000 000');
+                    } else {
+                        this.setCustomValidity('');
+                    }
+                });
+            }
+            
+            // Event listeners
+            if (deviseSource) {
+                deviseSource.addEventListener('change', checkDevises);
+            }
+            
+            if (deviseCible) {
+                deviseCible.addEventListener('change', checkDevises);
+            }
+            
+            if (btnExchange) {
+                btnExchange.addEventListener('click', exchangeDevises);
+            }
+            
+            // Exemples de conversion
+            document.querySelectorAll('.example-conversion').forEach(example => {
+                example.addEventListener('click', function() {
+                    const source = this.dataset.source;
+                    const target = this.dataset.target;
+                    const amount = this.dataset.amount;
+                    
+                    fillExample(source, target, amount);
+                    
+                    // Feedback visuel
+                    this.style.background = 'rgba(40, 167, 69, 0.2)';
+                    setTimeout(() => {
+                        this.style.background = '';
+                    }, 500);
+                });
+            });
+            
+            // Raccourcis clavier
+            document.addEventListener('keydown', function(e) {
+                // Ctrl + E pour échanger les devises
+                if (e.ctrlKey && e.key === 'e') {
+                    e.preventDefault();
+                    exchangeDevises();
+                }
+                
+                // Ctrl + Enter pour soumettre le formulaire
+                if (e.ctrlKey && e.key === 'Enter') {
+                    e.preventDefault();
+                    if (form) form.submit();
+                }
+            });
+            
+            // Initialisation
+            validateDate();
+            validateMontant();
+            checkDevises(); // Vérification initiale
+            
+            // Tooltip pour les raccourcis
+            if (btnExchange) {
+                btnExchange.title = 'Échanger les devises (Ctrl + E)';
+            }
+            
+            // Animation d'entrée
+            const cards = document.querySelectorAll('.card');
+            cards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    card.style.transition = 'all 0.5s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+            
+            // Affichage d'informations utiles dans la console
+            console.log('🚀 Convertisseur de Devises Visa initialisé');
+            console.log('📋 Raccourcis disponibles:');
+            console.log('   • Ctrl + E : Échanger les devises');
+            console.log('   • Ctrl + Enter : Soumettre le formulaire');
+            console.log('💡 Devises Visa supportées:', devisesVisa.length, 'devises');
+        });
+    </script>
+{% endblock %}
+
