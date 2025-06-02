@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Test API Visa</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, button {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .loading {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        .methods {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .method-btn {
+            flex: 1;
+            padding: 10px;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .method-btn.active {
+            background-color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test API Visa Exchange Rate</h1>
+        
+        <div class="methods">
+            <button class="method-btn active" onclick="setMethod('POST')">POST Method</button>
+            <button class="method-btn" onclick="setMethod('GET')">GET Method</button>
+        </div>
+
+        <!-- Formulaire POST -->
+        <form id="postForm" style="display: block;">
+            <div class="form-group">
+                <label for="amount">Montant:</label>
+                <input type="number" id="amount" name="amount" value="100" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="fromCurr">Devise source:</label>
+                <select id="fromCurr" name="fromCurr" required>
+                    <option value="EUR" selected>EUR - Euro</option>
+                    <option value="USD">USD - Dollar américain</option>
+                    <option value="GBP">GBP - Livre sterling</option>
+                    <option value="JPY">JPY - Yen japonais</option>
+                    <option value="CAD">CAD - Dollar canadien</option>
+                    <option value="AUD">AUD - Dollar australien</option>
+                    <option value="CHF">CHF - Franc suisse</option>
+                    <option value="MGA">MGA - Ariary malgache</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="toCurr">Devise cible:</label>
+                <select id="toCurr" name="toCurr" required>
+                    <option value="USD" selected>USD - Dollar américain</option>
+                    <option value="EUR">EUR - Euro</option>
+                    <option value="GBP">GBP - Livre sterling</option>
+                    <option value="JPY">JPY - Yen japonais</option>
+                    <option value="CAD">CAD - Dollar canadien</option>
+                    <option value="AUD">AUD - Dollar australien</option>
+                    <option value="CHF">CHF - Franc suisse</option>
+                    <option value="MGA">MGA - Ariary malgache</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="fee">Frais (%):</label>
+                <input type="number" id="fee" name="fee" value="0" min="0" max="100" step="0.1">
+            </div>
+            
+            <button type="button" onclick="testApi()">🚀 Tester l'API</button>
+        </form>
+
+        <!-- Formulaire GET -->
+        <form id="getForm" style="display: none;">
+            <div class="form-group">
+                <label for="amountGet">Montant:</label>
+                <input type="number" id="amountGet" name="amount" value="100" required>
+            </div>
+            
+            <button type="button" onclick="testApiGet()">🚀 Tester l'API (GET)</button>
+        </form>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        let currentMethod = 'POST';
+
+        function setMethod(method) {
+            currentMethod = method;
+            
+            // Mettre à jour les boutons
+            document.querySelectorAll('.method-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Afficher/masquer les formulaires
+            if (method === 'POST') {
+                document.getElementById('postForm').style.display = 'block';
+                document.getElementById('getForm').style.display = 'none';
+            } else {
+                document.getElementById('postForm').style.display = 'none';
+                document.getElementById('getForm').style.display = 'block';
+            }
+        }
+
+        function showResult(content, isError = false) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = 'result ' + (isError ? 'error' : 'success');
+            resultDiv.textContent = JSON.stringify(content, null, 2);
+        }
+
+        function showLoading() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = 'result loading';
+            resultDiv.textContent = '⏳ Appel de l\'API en cours...';
+        }
+
+        async function testApi() {
+            const amount = document.getElementById('amount').value;
+            const fromCurr = document.getElementById('fromCurr').value;
+            const toCurr = document.getElementById('toCurr').value;
+            const fee = document.getElementById('fee').value;
+
+            showLoading();
+
+            try {
+                const formData = new FormData();
+                formData.append('amount', amount);
+                formData.append('fromCurr', fromCurr);
+                formData.append('toCurr', toCurr);
+                formData.append('fee', fee);
+
+                console.log('📤 Envoi des données:', {
+                    amount: amount,
+                    fromCurr: fromCurr,
+                    toCurr: toCurr,
+                    fee: fee
+                });
+
+                const response = await fetch('/api/exchange-rate-calculator', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                console.log('📥 Status de la réponse:', response.status);
+                console.log('📥 Headers de la réponse:', [...response.headers.entries()]);
+
+                const data = await response.json();
+                
+                console.log('📊 Données reçues:', data);
+
+                showResult({
+                    status_response: response.status,
+                    headers: Object.fromEntries([...response.headers.entries()]),
+                    data: data,
+                    timestamp: new Date().toISOString()
+                });
+
+            } catch (error) {
+                console.error('💥 Erreur:', error);
+                showResult({
+                    error: error.message,
+                    timestamp: new Date().toISOString()
+                }, true);
+            }
+        }
+
+        async function testApiGet() {
+            const amount = document.getElementById('amountGet').value;
+
+            showLoading();
+
+            try {
+                console.log('📤 Appel GET avec montant:', amount);
+
+                const response = await fetch(`/api/exchange-rate-calculator/${amount}`, {
+                    method: 'GET'
+                });
+
+                console.log('📥 Status de la réponse:', response.status);
+
+                const data = await response.json();
+                
+                console.log('📊 Données reçues:', data);
+
+                showResult({
+                    status_response: response.status,
+                    data: data,
+                    timestamp: new Date().toISOString()
+                });
+
+            } catch (error) {
+                console.error('💥 Erreur:', error);
+                showResult({
+                    error: error.message,
+                    timestamp: new Date().toISOString()
+                }, true);
+            }
+        }
+
+        // Test automatique au chargement de la page
+        window.addEventListener('load', function() {
+            console.log('🎯 Page chargée, test automatique dans 2 secondes...');
+            setTimeout(() => {
+                testApi();
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
