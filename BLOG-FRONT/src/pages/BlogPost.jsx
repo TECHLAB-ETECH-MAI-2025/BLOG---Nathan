@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import ApiService from '../services/api'
+import Comments from '../components/Comments'
 import './BlogPost.css'
 
 function BlogPost() {
@@ -14,39 +16,23 @@ function BlogPost() {
 
   const fetchPost = async () => {
     try {
-      // Remplacez par votre appel API réel
-      // const response = await fetch(`http://localhost:3001/api/posts/${id}`)
-      // const data = await response.json()
-      // setPost(data)
-
-      // Données de test pour l'instant
-      setTimeout(() => {
-        const mockPost = {
-          id: parseInt(id),
-          title: `Article ${id} - Titre complet`,
-          content: `
-            <h2>Introduction</h2>
-            <p>Ceci est le contenu complet de l'article ${id}. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
-            
-            <h3>Section principale</h3>
-            <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p>
-            
-            <h3>Conclusion</h3>
-            <p>Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.</p>
-          `,
-          author: 'Nathan',
-          createdAt: '2024-01-15T10:30:00Z',
-          updatedAt: '2024-01-15T14:20:00Z',
-          tags: ['React', 'JavaScript', 'Web Development'],
-          readTime: '5 min'
-        }
-        setPost(mockPost)
-        setLoading(false)
-      }, 1000)
+      setLoading(true)
+      const response = await ApiService.getArticle(id)
+      setPost(response)
     } catch (err) {
+      console.error('Erreur lors du chargement de l\'article:', err)
       setError('Erreur lors du chargement de l\'article')
+    } finally {
       setLoading(false)
     }
+  }
+
+  const handleCommentAdded = (newComment) => {
+    // Ajouter le nouveau commentaire à la liste
+    setPost(prevPost => ({
+      ...prevPost,
+      comments: [newComment, ...prevPost.comments]
+    }))
   }
 
   if (loading) {
@@ -74,7 +60,7 @@ function BlogPost() {
       <div className="blog-post-container">
         <div className="not-found">
           <h2>Article non trouvé</h2>
-          <p>L'article demandé n'existe pas.</p>
+          <p>L'article que vous recherchez n'existe pas ou a été supprimé.</p>
           <Link to="/" className="back-link">← Retour à l'accueil</Link>
         </div>
       </div>
@@ -83,44 +69,55 @@ function BlogPost() {
 
   return (
     <div className="blog-post-container">
+      <Link to="/" className="back-link">← Retour aux articles</Link>
+      
       <article className="blog-post">
         <header className="post-header">
-          <Link to="/" className="back-link">← Retour aux articles</Link>
           <h1 className="post-title">{post.title}</h1>
           <div className="post-meta">
             <div className="meta-info">
               <span className="author">Par {post.author}</span>
               <span className="date">
-                {new Date(post.createdAt).toLocaleDateString('fr-FR', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-                })}
+                Publié le {new Date(post.createdAt).toLocaleDateString('fr-FR')}
               </span>
-              <span className="read-time">{post.readTime} de lecture</span>
+              {post.updatedAt && post.updatedAt !== post.createdAt && (
+                <span className="updated">
+                  Modifié le {new Date(post.updatedAt).toLocaleDateString('fr-FR')}
+                </span>
+              )}
+              {post.likesCount > 0 && (
+                <span className="likes">
+                  ❤️ {post.likesCount} like{post.likesCount > 1 ? 's' : ''}
+                </span>
+              )}
             </div>
-            {post.tags && (
-              <div className="tags">
-                {post.tags.map(tag => (
-                  <span key={tag} className="tag">#{tag}</span>
+            {post.categories && post.categories.length > 0 && (
+              <div className="post-categories">
+                {post.categories.map(category => (
+                  <span key={category.id} className="category-tag">
+                    {category.name}
+                  </span>
                 ))}
               </div>
             )}
           </div>
         </header>
-        
-        <div className="post-content" dangerouslySetInnerHTML={{ __html: post.content }} />
-        
-        <footer className="post-footer">
-          {post.updatedAt !== post.createdAt && (
-            <p className="updated-date">
-              Dernière mise à jour : {new Date(post.updatedAt).toLocaleDateString('fr-FR')}
-            </p>
-          )}
-        </footer>
+
+        <div className="post-content">
+          {post.content.split('\n').map((paragraph, index) => (
+            paragraph.trim() && <p key={index}>{paragraph}</p>
+          ))}
+        </div>
+
+        <Comments 
+          articleId={post.id}
+          comments={post.comments || []}
+          onCommentAdded={handleCommentAdded}
+        />
       </article>
     </div>
   )
 }
 
 export default BlogPost
+
