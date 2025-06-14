@@ -3,47 +3,77 @@
 {% block title %}Accueil - Blog Nathan{% endblock %}
 
 {% block body %}
-<div class="jumbotron bg-light p-5 rounded">
-    <h1 class="display-4">Bienvenue sur mon blog</h1>
-    <p class="lead">Découvrez mes derniers articles et partagez vos commentaires.</p>
-    <hr class="my-4">
-    <p>Vous pouvez parcourir les articles par catégories ou consulter les dernières publications.</p>
-    <a class="btn btn-primary btn-lg" href="{{ path('app_article_index') }}" role="button">Voir tous les articles</a>
+<div class="jumbotron p-5 mb-4 bg-light rounded-3">
+    <div class="container">
+        <h1 class="display-4">Bienvenue sur le Blog de Nathan</h1>
+        <p class="lead">Découvrez les derniers articles, partagez vos commentaires et interagissez avec la communauté.</p>
+        <hr class="my-4">
+        <p>Explorez les différentes catégories ou recherchez un sujet spécifique.</p>
+        <a class="btn btn-primary btn-lg" href="{{ path('app_article_index') }}" role="button">
+            <i class="bi bi-journal-text"></i> Voir tous les articles
+        </a>
+    </div>
 </div>
 
-<h2 class="mt-5 mb-4">Derniers articles</h2>
-
-<div class="row">
-    {% for article in articles %}
-        <div class="col-md-4 mb-4">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title">{{ article.titre }}</h5>
-                    <p class="card-text">{{ article.contenu|slice(0, 100) }}...</p>
-                    <div class="mb-2">
-                        {% for category in article.categories %}
-                            <span class="badge bg-secondary">{{ category.nom }}</span>
-                        {% endfor %}
+<div class="container">
+    <h2 class="mb-4">Articles récents</h2>
+    
+    <div class="row">
+        {% for article in recentArticles %}
+            <div class="col-md-4 mb-4">
+                <div class="card article-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ article.titre }}</h5>
+                        <div class="mb-2">
+                            {% for category in article.categories %}
+                                <span class="badge bg-secondary">{{ category.nom }}</span>
+                            {% endfor %}
+                        </div>
+                        <p class="card-text">{{ article.contenu|striptags|slice(0, 150) }}...</p>
+                    </div>
+                    <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
+                        <small class="text-muted">
+                            <i class="bi bi-chat-dots"></i> {{ article.comments|length }} commentaires
+                        </small>
+                        <a href="{{ path('app_article_show', {'id': article.id}) }}" class="btn btn-sm btn-outline-primary">
+                            Lire la suite <i class="bi bi-arrow-right"></i>
+                        </a>
                     </div>
                 </div>
-                <div class="card-footer bg-transparent border-top-0">
-                    <a href="{{ path('app_article_show', {'id': article.id}) }}" class="btn btn-primary">Lire la suite</a>
+            </div>
+        {% else %}
+            <div class="col-12">
+                <div class="alert alert-info">
+                    Aucun article disponible pour le moment.
                 </div>
             </div>
-        </div>
-    {% else %}
-        <div class="col-12">
-            <p>Aucun article disponible pour le moment.</p>
-        </div>
-    {% endfor %}
-</div>
-
-<div class="d-flex justify-content-center mt-4">
-    {% include 'components/_pagination.html.twig' with {
-        currentPage: currentPage,
-        maxPages: maxPages,
-        route: 'app_home',
-        params: {}
-    } %}
+        {% endfor %}
+    </div>
+    
+    <h2 class="mb-4 mt-5">Catégories</h2>
+    
+    <div class="row">
+        {% for category in categories %}
+            <div class="col-md-3 mb-4">
+                <div class="card article-card h-100">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">{{ category.nom }}</h5>
+                        <p class="card-text">
+                            <span class="badge bg-primary rounded-pill">{{ category.articles|length }} articles</span>
+                        </p>
+                        <a href="{{ path('app_category_show', {'id': category.id}) }}" class="btn btn-outline-secondary">
+                            Explorer <i class="bi bi-grid"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="col-12">
+                <div class="alert alert-info">
+                    Aucune catégorie disponible pour le moment.
+                </div>
+            </div>
+        {% endfor %}
+    </div>
 </div>
 {% endblock %}
