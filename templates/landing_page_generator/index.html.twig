@@ -1,0 +1,213 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Générateur de Landing Page avec Gemini{% endblock %}
+
+{% block stylesheets %}
+    <style>
+        .generator-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .generator-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .generator-header h1 {
+            color: #2563eb;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .generator-header p {
+            color: #6b7280;
+            font-size: 1.1rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-label {
+            display: block;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+        
+        .form-textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1rem;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-textarea:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        
+        .btn-generate {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        
+        .btn-generate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(37, 99, 235, 0.3);
+        }
+        
+        .btn-generate:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .examples {
+            background: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-top: 2rem;
+        }
+        
+        .examples h3 {
+            color: #374151;
+            margin-bottom: 1rem;
+        }
+        
+        .example-item {
+            background: white;
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .example-item:hover {
+            border-color: #2563eb;
+            transform: translateX(4px);
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #2563eb;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        
+        .alert-error {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+    <div class="generator-container">
+        <div class="generator-header">
+            <h1>🚀 Générateur de Landing Page</h1>
+            <p>Créez une landing page professionnelle en quelques secondes avec l'IA Gemini</p>
+        </div>
+
+        {% for message in app.flashes('error') %}
+            <div class="alert alert-error">
+                {{ message }}
+            </div>
+        {% endfor %}
+
+        <form id="generatorForm" action="{{ path('landing_page_generate') }}" method="POST">
+            <div class="form-group">
+                <label for="prompt" class="form-label">
+                    Décrivez votre landing page 💡
+                </label>
+                <textarea 
+                    id="prompt" 
+                    name="prompt" 
+                    class="form-textarea" 
+                    placeholder="Exemple: Créez une landing page pour une application de fitness qui aide les utilisateurs à suivre leurs entraînements. Utilisez des couleurs énergiques comme le orange et le bleu. Incluez des témoignages d'utilisateurs satisfaits et mettez l'accent sur la facilité d'utilisation."
+                    required
+                ></textarea>
+            </div>
+
+            <button type="submit" class="btn-generate" id="generateBtn">
+                ✨ Générer ma Landing Page
+            </button>
+        </form>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Génération en cours... Cela peut prendre quelques secondes ⏳</p>
+        </div>
+
+        <div class="examples">
+            <h3>💡 Exemples de prompts</h3>
+            <div class="example-item" onclick="fillPrompt(this)">
+                Landing page pour une startup de livraison de repas bio avec un design moderne et écologique
+            </div>
+            <div class="example-item" onclick="fillPrompt(this)">
+                Page de vente pour un cours en ligne de développement web, style professionnel avec du bleu et blanc
+            </div>
+            <div class="example-item" onclick="fillPrompt(this)">
+                Landing page pour une application mobile de méditation, design zen avec des couleurs apaisantes
+            </div>
+            <div class="example-item" onclick="fillPrompt(this)">
+                Page de présentation pour une agence de marketing digital, style corporate moderne
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block javascripts %}
+    <script>
+        function fillPrompt(element) {
+            document.getElementById('prompt').value = element.textContent.trim();
+        }
+
+        document.getElementById('generatorForm').addEventListener('submit', function() {
+            document.getElementById('generateBtn').disabled = true;
+            document.getElementById('generateBtn').textContent = 'Génération en cours...';
+            document.getElementById('loading').style.display = 'block';
+        });
+    </script>
+{% endblock %}
