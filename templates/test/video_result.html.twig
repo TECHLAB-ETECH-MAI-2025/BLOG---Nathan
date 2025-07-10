@@ -1,0 +1,61 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Résultat Génération Vidéo{% endblock %}
+
+{% block body %}
+<div style="max-width: 800px; margin: 2rem auto; padding: 2rem;">
+    <h1>🎬 Résultat de la génération vidéo</h1>
+    
+    <div style="margin-bottom: 2rem; padding: 1rem; background: #f8fafc; border-radius: 8px;">
+        <strong>Prompt utilisé :</strong> {{ prompt }}<br>
+        <strong>Modèle :</strong> {{ model }}
+    </div>
+    
+    {% if success %}
+        <div style="padding: 1rem; background: #ecfdf5; color: #065f46; border-radius: 8px; margin-bottom: 2rem;">
+            ✅ Vidéo générée avec succès !
+        </div>
+        
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <video controls style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <source src="{{ video_url }}" type="video/mp4">
+                Votre navigateur ne supporte pas la lecture vidéo.
+            </video>
+        </div>
+        
+        {% if details %}
+            <div style="padding: 1rem; background: #f0f9ff; border-radius: 8px;">
+                <h3>📊 Détails :</h3>
+                <ul>
+                    <li><strong>Modèle utilisé :</strong> {{ details.model_used }}</li>
+                    <li><strong>Durée :</strong> {{ details.duration }}</li>
+                    <li><strong>Résolution :</strong> {{ details.resolution }}</li>
+                    <li><strong>Format :</strong> {{ details.mime_type }}</li>
+                </ul>
+            </div>
+        {% endif %}
+    {% else %}
+        <div style="padding: 1rem; background: #fef2f2; color: #dc2626; border-radius: 8px; margin-bottom: 2rem;">
+            ❌ Erreur : {{ error }}
+        </div>
+        
+        {% if retry_after %}
+            <div style="padding: 1rem; background: #fffbeb; border-radius: 8px; margin-bottom: 1rem;">
+                <strong>⏱️ Temps d'attente estimé :</strong> {{ retry_after }} secondes
+            </div>
+        {% endif %}
+        
+        {% if message %}
+            <div style="padding: 1rem; background: #f0f9ff; border-radius: 8px;">
+                <strong>💡 Info :</strong> {{ message }}
+            </div>
+        {% endif %}
+    {% endif %}
+    
+    <div style="margin-top: 2rem; text-align: center;">
+        <a href="{{ path('test_video_generation') }}" style="background: #6b7280; color: white; padding: 0.75rem 1.5rem; text-decoration: none; border-radius: 8px;">
+            🔄 Essayer un autre prompt
+        </a>
+    </div>
+</div>
+{% endblock %}

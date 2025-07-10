@@ -1,0 +1,130 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}🎬 Génération Vidéo avec Replicate{% endblock %}
+
+{% block body %}
+<div style="max-width: 900px; margin: 2rem auto; padding: 2rem;">
+    <h1>🎬 Génération de Vidéo avec Replicate</h1>
+    
+    <div style="margin-bottom: 2rem; padding: 1rem; background: #e0f2fe; border-radius: 8px;">
+        <h3>ℹ️ À propos de Replicate :</h3>
+        <ul>
+            <li><strong>Qualité :</strong> Vidéos haute qualité (jusqu'à 1024x576)</li>
+            <li><strong>Durée :</strong> 2-5 secondes par vidéo</li>
+            <li><strong>Temps :</strong> 1-3 minutes de génération</li>
+            <li><strong>Coût :</strong> ~$0.01-0.05 par vidéo</li>
+            <li><strong>Formats :</strong> MP4, WebM supportés</li>
+        </ul>
+    </div>
+    
+    <form method="POST">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+            <!-- Colonne gauche : Paramètres principaux -->
+            <div>
+                <h3>📝 Paramètres principaux</h3>
+                
+                <div style="margin-bottom: 1rem;">
+                    <label for="prompt"><strong>Prompt pour la vidéo :</strong></label>
+                    <textarea name="prompt" id="prompt" rows="4" style="width: 100%; padding: 0.5rem; border-radius: 4px; border: 1px solid #ccc;">A majestic eagle soaring through mountain peaks, cinematic shot, high quality, smooth motion</textarea>
+                </div>
+                
+                <div style="margin-bottom: 1rem;">
+                    <label for="model"><strong>Modèle :</strong></label>
+                    <select name="model" id="model" style="width: 100%; padding: 0.5rem; border-radius: 4px; border: 1px solid #ccc;">
+                        {% for key, model in available_models %}
+                            <option value="{{ key }}" {% if key == 'zeroscope-v2' %}selected{% endif %}>
+                                {{ key }} - {{ model.description }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div style="margin-bottom: 1rem;">
+                    <label>
+                        <input type="checkbox" name="wait_completion" value="1">
+                        <strong>Attendre la fin de génération</strong> (peut prendre 2-5 minutes)
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Colonne droite : Paramètres avancés -->
+            <div>
+                <h3>⚙️ Paramètres avancés</h3>
+                
+                <div style="margin-bottom: 1rem;">
+                    <label for="num_frames"><strong>Nombre de frames :</strong></label>
+                    <input type="number" name="num_frames" id="num_frames" value="24" min="8" max="48" style="width: 100%; padding: 0.5rem; border-radius: 4px; border: 1px solid #ccc;">
+                    <small>Plus de frames = vidéo plus longue mais plus lente à générer</small>
+                </div>
+                
+                <div style="margin-bottom: 1rem;">
+                    <label for="steps"><strong>Étapes d'inférence :</strong></label>
+                    <input type="number" name="steps" id="steps" value="20" min="10" max="50" style="width: 100%; padding: 0.5rem; border-radius: 4px; border: 1px solid #ccc;">
+                    <small>Plus d'étapes = meilleure qualité mais plus lent</small>
+                </div>
+                
+                <div style="margin-bottom: 1rem;">
+                    <label for="guidance"><strong>Guidance Scale :</strong></label>
+                    <input type="number" name="guidance" id="guidance" value="17.5" min="1" max="30" step="0.5" style="width: 100%; padding: 0.5rem; border-radius: 4px; border: 1px solid #ccc;">
+                    <small>Contrôle l'adhérence au prompt (7.5-20 recommandé)</small>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label for="width"><strong>Largeur :</strong></label>
+                        <select name="width" id="width" style="width: 100%; padding: 0.5rem; border-radius: 4px; border: 1px solid #ccc;">
+                            <option value="512">512px</option>
+                            <option value="768">768px</option>
+                            <option value="1024" selected>1024px</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="height"><strong>Hauteur :</strong></label>
+                        <select name="height" id="height" style="width: 100%; padding: 0.5rem; border-radius: 4px; border: 1px solid #ccc;">
+                            <option value="512">512px</option>
+                            <option value="576" selected>576px</option>
+                            <option value="768">768px</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 1rem;">
+                    <label for="fps"><strong>FPS (Images par seconde) :</strong></label>
+                    <select name="fps" id="fps" style="width: 100%; padding: 0.5rem; border-radius: 4px; border: 1px solid #ccc;">
+                        <option value="6">6 FPS</option>
+                        <option value="8" selected>8 FPS</option>
+                        <option value="12">12 FPS</option>
+                        <option value="24">24 FPS</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 2rem;">
+            <button type="submit" style="background: #2196F3; color: white; padding: 1rem 2rem; border: none; border-radius: 8px; font-size: 1.1rem; cursor: pointer;">
+                🎬 Générer la Vidéo
+            </button>
+        </div>
+    </form>
+    
+    <!-- Exemples de prompts -->
+    <div style="margin-top: 3rem; padding: 1rem; background: #f5f5f5; border-radius: 8px;">
+        <h3>💡 Exemples de prompts efficaces :</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">
+            <div onclick="document.getElementById('prompt').value = this.textContent.trim()" style="cursor: pointer; padding: 0.5rem; background: white; border-radius: 4px; border-left: 4px solid #2196F3;">
+                A serene ocean wave crashing on a sandy beach at sunset, cinematic, high quality
+            </div>
+            <div onclick="document.getElementById('prompt').value = this.textContent.trim()" style="cursor: pointer; padding: 0.5rem; background: white; border-radius: 4px; border-left: 4px solid #4CAF50;">
+                A cute cat playing with a ball of yarn in a cozy living room, soft lighting
+            </div>
+            <div onclick="document.getElementById('prompt').value = this.textContent.trim()" style="cursor: pointer; padding: 0.5rem; background: white; border-radius: 4px; border-left: 4px solid #FF9800;">
+                Time-lapse of clouds moving across a blue sky over green hills, peaceful
+            </div>
+            <div onclick="document.getElementById('prompt').value = this.textContent.trim()" style="cursor: pointer; padding: 0.5rem; background: white; border-radius: 4px; border-left: 4px solid #9C27B0;">
+                A person walking through a misty forest path, ethereal atmosphere, cinematic
+            </div>
+        </div>
+        <small style="color: #666;">Cliquez sur un exemple pour l'utiliser</small>
+    </div>
+</div>
+{% endblock %}

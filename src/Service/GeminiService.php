@@ -9,11 +9,86 @@ class GeminiService
 {
     private HttpClientInterface $httpClient;
     private string $apiKey;
+    private ?GeminiImageService $imageService;
 
-    public function __construct(HttpClientInterface $httpClient, string $geminiApiKey)
+    public function __construct(HttpClientInterface $httpClient, string $geminiApiKey, ?GeminiImageService $imageService = null)
     {
         $this->httpClient = $httpClient;
         $this->apiKey = $geminiApiKey;
+        $this->imageService = $imageService;
+    }
+
+    public function generateLandingPageWithCustomImages(string $prompt): array
+    {
+        // 1. Générer le contenu HTML
+        $htmlResult = $this->generateLandingPage($prompt);
+        
+        if (!$htmlResult['success']) {
+            return $htmlResult;
+        }
+
+        // 2. Générer des images personnalisées si le service est disponible
+        $generatedImages = [];
+        if ($this->imageService) {
+            $imagePrompts = $this->extractImagePrompts($prompt);
+            
+            foreach ($imagePrompts as $imagePrompt) {
+                $imageResult = $this->imageService->generateImage($imagePrompt);
+                
+                if ($imageResult['success'] && $imageResult['image_type'] === 'base64') {
+                    $imagePath = $this->imageService->saveBase64Image(
+                        $imageResult['image_data'],
+                        $imageResult['mime_type']
+                    );
+                    $generatedImages[] = $imagePath;
+                }
+            }
+        }
+
+        // 3. Intégrer les images générées dans le HTML
+        $htmlWithCustomImages = $this->replaceImagePlaceholders($htmlResult['content'], $generatedImages);
+
+        return [
+            'success' => true,
+            'content' => $htmlWithCustomImages,
+            'generated_images' => $generatedImages
+        ];
+    }
+
+    private function extractImagePrompts(string $userPrompt): array
+    {
+        // Générer des prompts d'images spécifiques
+        $prompts = [
+            "Modern hero image for a landing page about: $userPrompt. Professional, high-quality, suitable for web header",
+            "Clean icon or illustration representing the main concept of: $userPrompt. Minimalist style",
+            "Professional team or person image related to: $userPrompt. Business context"
+        ];
+
+        return $prompts;
+    }
+
+    private function replaceImagePlaceholders(string $html, array $imagePaths): string
+    {
+        if (empty($imagePaths)) {
+            return $html;
+        }
+
+        // Remplacer les placeholders par les vraies images
+        $imageIndex = 0;
+        $html = preg_replace_callback(
+            '/src=["\']https:\/\/source\.unsplash\.com\/[^"\']*["\']/',
+            function($matches) use ($imagePaths, &$imageIndex) {
+                if (isset($imagePaths[$imageIndex])) {
+                    $imagePath = $imagePaths[$imageIndex];
+                    $imageIndex++;
+                    return 'src="' . $imagePath . '"';
+                }
+                return $matches[0];
+            },
+            $html
+        );
+
+        return $html;
     }
 
     public function generateLandingPage(string $prompt): array

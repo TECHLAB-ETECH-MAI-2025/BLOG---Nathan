@@ -1,0 +1,50 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Test Génération Vidéo{% endblock %}
+
+{% block body %}
+<div style="max-width: 800px; margin: 2rem auto; padding: 2rem;">
+    <h1>🎬 Test Génération de Vidéo</h1>
+    
+    <form method="POST">
+        <div style="margin-bottom: 1rem;">
+            <label for="prompt">Prompt pour la vidéo :</label>
+            <textarea name="prompt" id="prompt" rows="4" style="width: 100%; padding: 0.5rem;">A modern business office with people working, professional environment, smooth camera movement</textarea>
+        </div>
+        
+        <div style="margin-bottom: 1rem;">
+            <label for="model">Modèle :</label>
+            <select name="model" id="model" style="width: 100%; padding: 0.5rem;">
+                {% for key, model in available_models %}
+                    <option value="{{ key }}">{{ key }} ({{ model }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <button type="submit" style="background: #dc2626; color: white; padding: 1rem 2rem; border: none; border-radius: 8px;">
+            🎬 Générer la vidéo
+        </button>
+    </form>
+    
+    <div style="margin-top: 2rem; padding: 1rem; background: #fef3c7; border-radius: 8px;">
+        <h3>⚠️ Important :</h3>
+        <ul>
+            <li><strong>Temps de génération :</strong> 2-10 minutes (très long !)</li>
+            <li><strong>Première utilisation :</strong> Peut prendre jusqu'à 15 minutes</li>
+            <li><strong>Qualité :</strong> Vidéos courtes (3-5 secondes)</li>
+            <li><strong>Format :</strong> 576x320 pixels, MP4</li>
+            <li><strong>Prompts :</strong> Utilisez l'anglais pour de meilleurs résultats</li>
+        </ul>
+    </div>
+    
+    <div style="margin-top: 1rem; padding: 1rem; background: #e0f2fe; border-radius: 8px;">
+        <h3>💡 Conseils pour de bons prompts :</h3>
+        <ul>
+            <li>"A person walking in a park, smooth motion"</li>
+            <li>"Ocean waves on a beach, cinematic"</li>
+            <li>"A cat playing with a ball, professional video"</li>
+            <li>"Modern city traffic, time lapse style"</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

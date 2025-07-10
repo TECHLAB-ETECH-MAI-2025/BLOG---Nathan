@@ -1,0 +1,123 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Statut Génération Vidéo{% endblock %}
+
+{% block body %}
+<div style="max-width: 700px; margin: 2rem auto; padding: 2rem;">
+    <h1>📊 Statut de la Génération Vidéo</h1>
+    
+    <div style="margin-bottom: 2rem; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+        <p><strong>ID de prédiction :</strong> <code>{{ prediction_id }}</code></p>
+        <p><strong>Dernière vérification :</strong> {{ "now"|date("d/m/Y H:i:s") }}</p>
+    </div>
+    
+    {% if result.success %}
+        {% set status = result.status %}
+        
+        {% if status == 'succeeded' %}
+            <!-- Terminé avec succès -->
+            <div style="text-align: center; padding: 2rem; background: #d4edda; border-radius: 8px; margin-bottom: 2rem;">
+                <h2>✅ Vidéo générée avec succès !</h2>
+                
+                {% if result.video_url %}
+                    <video controls style="max-width: 100%; height: auto; border-radius: 8px; margin: 1rem 0;">
+                        <source src="{{ result.video_url }}" type="video/mp4">
+                        Votre navigateur ne supporte pas la lecture vidéo.
+                    </video>
+                    
+                    <div style="margin-top: 1rem;">
+                        <a href="{{ result.video_url }}" download style="background: #28a745; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px; margin-right: 1rem;">
+                            📥 Télécharger
+                        </a>
+                        <a href="{{ result.video_url }}" target="_blank" style="background: #007bff; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px;">
+                            🔗 Ouvrir dans un nouvel onglet
+                        </a>
+                    </div>
+                {% endif %}
+                
+                {% if result.duration_seconds is defined %}
+                    <p style="margin-top: 1rem; color: #666;">
+                        ⏱️ Temps de génération : {{ result.duration_seconds }} secondes
+                    </p>
+                {% endif %}
+            </div>
+            
+        {% elseif status == 'processing' or status == 'starting' %}
+            <!-- En cours -->
+            <div style="text-align: center; padding: 2rem; background: #fff3cd; border-radius: 8px; margin-bottom: 2rem;">
+                <h2>⏳ Génération en cours...</h2>
+                <p>Statut actuel : <strong>{{ status|title }}</strong></p>
+                
+                {% if result.started_at %}
+                    <p>Démarré à : {{ result.started_at|date("H:i:s") }}</p>
+                {% endif %}
+                
+                <div style="margin: 2rem 0;">
+                    <div style="width: 100%; background: #e9ecef; border-radius: 10px; overflow: hidden;">
+                        <div style="width: {{ status == 'processing' ? '60' : '20' }}%; height: 20px; background: linear-gradient(90deg, #007bff, #0056b3); transition: width 0.3s ease;"></div>
+                    </div>
+                    <p style="margin-top: 0.5rem; color: #666;">
+                        {{ status == 'processing' ? 'Génération en cours...' : 'Initialisation...' }}
+                    </p>
+                </div>
+                
+                <button onclick="location.reload()" style="background: #007bff; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer;">
+                    🔄 Actualiser
+                </button>
+            </div>
+            
+            <!-- Auto-refresh -->
+            <script>
+                setTimeout(function() {
+                    location.reload();
+                }, 10000); // Actualiser toutes les 10 secondes
+            </script>
+            
+        {% elseif status == 'failed' %}
+            <!-- Échec -->
+            <div style="text-align: center; padding: 2rem; background: #f8d7da; border-radius: 8px; margin-bottom: 2rem;">
+                <h2>❌ Génération échouée</h2>
+                <p><strong>Erreur :</strong> {{ result.error }}</p>
+                
+                {% if result.started_at and result.completed_at %}
+                    <p>Durée avant échec : {{ ((result.completed_at|date("U")) - (result.started_at|date("U"))) }} secondes</p>
+                {% endif %}
+            </div>
+            
+        {% else %}
+            <!-- Statut inconnu -->
+            <div style="text-align: center; padding: 2rem; background: #e2e3e5; border-radius: 8px; margin-bottom: 2rem;">
+                <h2>❓ Statut : {{ status|title }}</h2>
+                <p>Statut non reconnu. Vérifiez manuellement sur Replicate.</p>
+            </div>
+        {% endif %}
+        
+        <!-- Détails techniques -->
+        <details style="margin-top: 2rem;">
+            <summary style="cursor: pointer; font-weight: bold; padding: 0.5rem; background: #f8f9fa; border-radius: 4px;">
+                🔧 Détails techniques
+            </summary>
+            <div style="margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 4px;">
+                <pre style="white-space: pre-wrap; font-size: 0.9rem;">{{ result|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
+            </div>
+        </details>
+        
+    {% else %}
+        <!-- Erreur lors de la vérification -->
+        <div style="text-align: center; padding: 2rem; background: #f8d7da; border-radius: 8px; margin-bottom: 2rem;">
+            <h2>❌ Erreur lors de la vérification</h2>
+            <p><strong>Erreur :</strong> {{ result.error }}</p>
+        </div>
+    {% endif %}
+    
+    <!-- Actions -->
+    <div style="text-align: center; margin-top: 2rem;">
+        <a href="{{ path('replicate_video_generation') }}" style="background: #6c757d; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px; margin-right: 1rem;">
+            ← Nouvelle génération
+        </a>
+        <button onclick="location.reload()" style="background: #17a2b8; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer;">
+            🔄 Actualiser
+        </button>
+    </div>
+</div>
+{% endblock %}

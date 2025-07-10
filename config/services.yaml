@@ -19,9 +19,27 @@ services:
             - '../src/DependencyInjection/'
             - '../src/Entity/'
             - '../src/Kernel.php'
+
+    App\Service\GeminiImageService:
+        arguments:
+            $geminiApiKey: '%env(GEMINI_API_KEY)%'
+
+    App\Service\HuggingFaceImageService:
+        arguments:
+            $huggingFaceToken: '%env(HUGGINGFACE_TOKEN)%'
+    
+    App\Service\HuggingFaceVideoService:
+        arguments:
+            $huggingFaceToken: '%env(HUGGINGFACE_TOKEN)%'
+
     App\Service\GeminiService:
         arguments:
             $geminiApiKey: '%gemini.api_key%'
+            $imageService: '@App\Service\GeminiImageService'
+    
+    App\Service\ReplicateVideoService:
+        arguments:
+            $replicateToken: '%env(REPLICATE_API_TOKEN)%'
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

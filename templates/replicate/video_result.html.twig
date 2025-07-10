@@ -1,0 +1,131 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Résultat Génération Vidéo{% endblock %}
+
+{% block body %}
+<div style="max-width: 900px; margin: 2rem auto; padding: 2rem;">
+    <h1>🎬 Résultat de la Génération Vidéo</h1>
+    
+    <div style="margin-bottom: 2rem; padding: 1rem; background: #f5f5f5; border-radius: 8px;">
+        <h3>📋 Paramètres utilisés :</h3>
+        <ul>
+            <li><strong>Prompt :</strong> {{ prompt }}</li>
+            <li><strong>Modèle :</strong> {{ model }}</li>
+            <li><strong>Mode :</strong> {{ synchronous ? 'Synchrone (avec attente)' : 'Asynchrone (démarrage seulement)' }}</li>
+            {% if options %}
+                <li><strong>Frames :</strong> {{ options.num_frames }}</li>
+                <li><strong>Résolution :</strong> {{ options.width }}x{{ options.height }}</li>
+                <li><strong>FPS :</strong> {{ options.fps }}</li>
+            {% endif %}
+        </ul>
+    </div>
+    
+    {% if result.success %}
+        {% if result.status == 'succeeded' and result.local_video_url is defined %}
+            <!-- Vidéo terminée et disponible -->
+            <div style="text-align: center; margin-bottom: 2rem; padding: 2rem; background: #e8f5e8; border-radius: 8px;">
+                <h2>✅ Vidéo générée avec succès !</h2>
+                
+                <video controls style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                    <source src="{{ result.local_video_url }}" type="video/mp4">
+                    Votre navigateur ne supporte pas la lecture vidéo.
+                </video>
+                
+                <div style="margin-top: 1rem;">
+                    <a href="{{ result.local_video_url }}" download style="background: #4CAF50; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px; margin-right: 1rem;">
+                        📥 Télécharger la vidéo
+                    </a>
+                    {% if result.video_url %}
+                        <a href="{{ result.video_url }}" target="_blank" style="background: #2196F3; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px;">
+                            🔗 Voir sur Replicate
+                        </a>
+                    {% endif %}
+                </div>
+                
+                {% if result.duration_seconds is defined %}
+                    <p style="margin-top: 1rem; color: #666;">
+                        ⏱️ Temps de génération : {{ result.duration_seconds }} secondes
+                    </p>
+                {% endif %}
+            </div>
+            
+        {% elseif result.status == 'processing' or result.status == 'starting' %}
+            <!-- Génération en cours -->
+            <div style="text-align: center; margin-bottom: 2rem; padding: 2rem; background: #fff3cd; border-radius: 8px;">
+                <h2>⏳ Génération en cours...</h2>
+                <p>Statut : <strong>{{ result.status }}</strong></p>
+                <p>ID de prédiction : <code>{{ result.prediction_id }}</code></p>
+                
+                <div style="margin: 2rem 0;">
+                    <div style="width: 100%; background: #e0e0e0; border-radius: 10px; overflow: hidden;">
+                        <div style="width: 30%; height: 20px; background: linear-gradient(90deg, #2196F3, #21CBF3); animation: pulse 2s infinite;"></div>
+                    </div>
+                    <p style="margin-top: 0.5rem; color: #666;">Génération en cours... Cela peut prendre 2-5 minutes</p>
+                </div>
+                
+                <div style="margin-top: 2rem;">
+                    <a href="{{ path('replicate_video_status_page', {predictionId: result.prediction_id}) }}" style="background: #2196F3; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px;">
+                        🔄 Suivre le progrès
+                    </a>
+                </div>
+            </div>
+            
+        {% elseif result.status == 'failed' %}
+            <!-- Génération échouée -->
+            <div style="text-align: center; margin-bottom: 2rem; padding: 2rem; background: #f8d7da; border-radius: 8px;">
+                <h2>❌ Génération échouée</h2>
+                <p><strong>Erreur :</strong> {{ result.error }}</p>
+                {% if result.prediction_id %}
+                    <p>ID de prédiction : <code>{{ result.prediction_id }}</code></p>
+                {% endif %}
+            </div>
+            
+        {% else %}
+            <!-- Génération démarrée (mode asynchrone) -->
+            <div style="text-align: center; margin-bottom: 2rem; padding: 2rem; background: #d4edda; border-radius: 8px;">
+                <h2>🚀 Génération démarrée !</h2>
+                <p>Votre vidéo est en cours de génération.</p>
+                <p>ID de prédiction : <code>{{ result.prediction_id }}</code></p>
+                
+                <div style="margin-top: 2rem;">
+                    <a href="{{ path('replicate_video_status_page', {predictionId: result.prediction_id}) }}" style="background: #2196F3; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px;">
+                        🔄 Vérifier le statut
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+        
+    {% else %}
+    <!-- Erreur -->
+    <div style="text-align: center; margin-bottom: 2rem; padding: 2rem; background: #f8d7da; border-radius: 8px;">
+        <h2>❌ Erreur lors de la génération</h2>
+        <p><strong>Erreur :</strong> {{ result.error }}</p>
+        {% if result.details %}
+            <details style="margin-top: 1rem; text-align: left;">
+                <summary style="cursor: pointer; font-weight: bold;">Détails techniques</summary>
+                <pre style="background: #f5f5f5; padding: 1rem; border-radius: 4px; overflow-x: auto;">{{ result.details|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
+            </details>
+        {% endif %}
+    </div>
+{% endif %}
+
+<!-- Actions -->
+<div style="text-align: center; margin-top: 2rem;">
+    <a href="{{ path('replicate_video_generation') }}" style="background: #6c757d; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px; margin-right: 1rem;">
+        ← Générer une nouvelle vidéo
+    </a>
+    <a href="{{ path('test_replicate_connection') }}" style="background: #17a2b8; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px;">
+        🔧 Tester la connexion
+    </a>
+</div>
+</div>
+
+<style>
+@keyframes pulse {
+0% { opacity: 1; }
+50% { opacity: 0.5; }
+100% { opacity: 1; }
+}
+</style>
+{% endblock %}
+

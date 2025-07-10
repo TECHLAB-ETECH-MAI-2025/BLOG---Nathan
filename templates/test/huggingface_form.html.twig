@@ -1,0 +1,38 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Test Hugging Face Image Generation{% endblock %}
+
+{% block body %}
+<div style="max-width: 800px; margin: 2rem auto; padding: 2rem;">
+    <h1>🤗 Test Hugging Face Image Generation</h1>
+    
+    <form method="POST">
+        <div style="margin-bottom: 1rem;">
+            <label for="prompt">Prompt pour l'image :</label>
+            <textarea name="prompt" id="prompt" rows="4" style="width: 100%; padding: 0.5rem;">A modern business office with computers and plants, professional photography, high quality</textarea>
+        </div>
+        
+        <div style="margin-bottom: 1rem;">
+            <label for="model">Modèle :</label>
+            <select name="model" id="model" style="width: 100%; padding: 0.5rem;">
+                {% for key, model in available_models %}
+                    <option value="{{ key }}">{{ key }} ({{ model }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <button type="submit" style="background: #ff6b35; color: white; padding: 1rem 2rem; border: none; border-radius: 8px;">
+            🎨 Générer l'image
+        </button>
+    </form>
+    
+    <div style="margin-top: 2rem; padding: 1rem; background: #fff3cd; border-radius: 8px;">
+        <h3>⚠️ Notes importantes :</h3>
+        <ul>
+            <li>La première génération peut prendre du temps (modèle en cours de chargement)</li>
+            <li>Utilisez des prompts en anglais pour de meilleurs résultats</li>
+            <li>Soyez patient, la génération peut prendre 10-30 secondes</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

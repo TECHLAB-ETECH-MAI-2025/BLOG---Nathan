@@ -1,0 +1,122 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Résultat Hugging Face{% endblock %}
+
+{% block body %}
+<div style="max-width: 800px; margin: 2rem auto; padding: 2rem;">
+    <h1>🤗 Résultat Hugging Face</h1>
+    
+    <div style="margin-bottom: 2rem; padding: 1rem; background: #f8fafc; border-radius: 8px;">
+        <strong>Prompt utilisé :</strong> {{ prompt }}<br>
+        <strong>Modèle :</strong> {{ model }}
+        {% if model_used is defined %}
+            <br><strong>Modèle réel :</strong> {{ model_used }}
+        {% endif %}
+    </div>
+    
+    {% if success %}
+        <div style="padding: 1rem; background: #ecfdf5; color: #065f46; border-radius: 8px; margin-bottom: 2rem;">
+            ✅ Image générée avec succès !
+        </div>
+        
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <img src="{{ image_url }}" alt="Image générée par Hugging Face" 
+                 style="max-width: 100%; max-height: 600px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        </div>
+        
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <a href="{{ image_url }}" download style="background: #3b82f6; color: white; padding: 0.75rem 1.5rem; text-decoration: none; border-radius: 8px; margin-right: 1rem;">
+                📥 Télécharger l'image
+            </a>
+        </div>
+        
+    {% else %}
+        <div style="padding: 1rem; background: #fef2f2; color: #dc2626; border-radius: 8px; margin-bottom: 2rem;">
+            ❌ Erreur : {{ error }}
+        </div>
+        
+        {% if retry_after is defined %}
+            <div style="padding: 1rem; background: #fffbeb; border-radius: 8px; margin-bottom: 1rem;">
+                <strong>⏳ Modèle en cours de chargement...</strong><br>
+                Temps d'attente estimé : {{ retry_after }} secondes<br>
+                <small>Veuillez réessayer dans quelques instants.</small>
+            </div>
+            
+            <script>
+                // Auto-refresh après le temps d'attente
+                setTimeout(function() {
+                    document.getElementById('retry-button').style.display = 'block';
+                }, {{ retry_after * 1000 }});
+            </script>
+            
+            <div id="retry-button" style="display: none; text-align: center;">
+                <button onclick="history.back(); setTimeout(() => document.querySelector('form').submit(), 100);" 
+                        style="background: #10b981; color: white; padding: 1rem 2rem; border: none; border-radius: 8px;">
+                    🔄 Réessayer maintenant
+                </button>
+            </div>
+        {% endif %}
+    {% endif %}
+    
+    <div style="margin-top: 2rem; text-align: center;">
+        <a href="{{ path('test_huggingface_image') }}" 
+           style="background: #6b7280; color: white; padding: 0.75rem 1.5rem; text-decoration: none; border-radius: 8px;">
+            🔄 Générer une nouvelle image
+        </a>
+    </div>
+    
+    {% if success %}
+        <div style="margin-top: 2rem; padding: 1rem; background: #f0f9ff; border-radius: 8px;">
+            <h3>💡 Conseils pour améliorer vos images :</h3>
+            <ul>
+                <li><strong>Soyez spécifique :</strong> "Modern glass office building" plutôt que "building"</li>
+                <li><strong>Ajoutez des qualificatifs :</strong> "professional", "high quality", "detailed"</li>
+                <li><strong>Spécifiez le style :</strong> "photography", "illustration", "corporate style"</li>
+                <li><strong>Utilisez l'anglais :</strong> Les modèles fonctionnent mieux en anglais</li>
+            </ul>
+        </div>
+    {% endif %}
+</div>
+
+{% if not success and retry_after is defined %}
+<style>
+    .loading-animation {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #3498db;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+
+<script>
+    // Countdown timer
+    let timeLeft = {{ retry_after }};
+    const countdownElement = document.createElement('div');
+    countdownElement.style.cssText = 'text-align: center; margin: 1rem 0; font-weight: bold; color: #f59e0b;';
+    countdownElement.innerHTML = '<span class="loading-animation"></span> Rechargement automatique dans <span id="countdown">' + timeLeft + '</span> secondes...';
+    
+    document.querySelector('.container, div').appendChild(countdownElement);
+    
+    const countdown = setInterval(function() {
+        timeLeft--;
+        document.getElementById('countdown').textContent = timeLeft;
+        
+        if (timeLeft <= 0) {
+            clearInterval(countdown);
+            countdownElement.innerHTML = '<span class="loading-animation"></span> Rechargement en cours...';
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        }
+    }, 1000);
+</script>
+{% endif %}
+{% endblock %}
